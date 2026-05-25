@@ -50,7 +50,14 @@ function classifyCategory(title) {
   if (value.includes('monitor')) return 'Monitor';
   if (value.includes('ssd')) return 'SSD';
   if (value.includes('memória') || value.includes('memoria') || value.includes('ram')) return 'RAM';
-  if (value.includes('placa de vídeo') || value.includes('placa de video') || value.includes('rtx') || value.includes('radeon')) return 'Graphics Card';
+  if (
+    value.includes('placa de vídeo') ||
+    value.includes('placa de video') ||
+    value.includes('rtx') ||
+    value.includes('radeon')
+  ) {
+    return 'Graphics Card';
+  }
   if (value.includes('processador') || value.includes('ryzen') || value.includes('intel')) return 'Processor';
   if (value.includes('placa mãe') || value.includes('placa mae') || value.includes('motherboard')) return 'Motherboard';
   if (value.includes('fonte')) return 'Power Supply';
@@ -90,7 +97,7 @@ async function fetchMercadoLivreSearchResults(keyword, sort) {
       return apiDeals;
     }
   } catch {
-    // Fall back to the HTML search page below.
+    // Fallback to HTML below.
   }
 
   try {
