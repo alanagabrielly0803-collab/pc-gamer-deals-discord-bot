@@ -121,16 +121,32 @@ export function isValidDeal(deal) {
     return false;
   }
 
+  const isMarketplaceFallback =
+    /mercado livre/i.test(String(deal.storeName || '')) ||
+    /html search fallback/i.test(String(deal.source || '')) ||
+    /public search api/i.test(String(deal.source || ''));
+
   const hasDiscount =
     deal.discountPercent !== null &&
     Number.isFinite(Number(deal.discountPercent)) &&
-    Number(deal.discountPercent) >= config.minDiscountPercent;
+    deal.discountPercent >= config.minDiscountPercent;
 
   const hasPriceDrop = Boolean(deal.priceDropText);
   const hasPromotionSignal = Boolean(deal.isFlashSale);
 
   if (!hasDiscount && !hasPriceDrop && !hasPromotionSignal) {
-    return false;
+    if (!isMarketplaceFallback) {
+      return false;
+    }
+
+    const titleLooksRelevant = containsAny(
+      textForMatching,
+      [...config.includeKeywords, ...hardwareHints]
+    );
+
+    if (!titleLooksRelevant) {
+      return false;
+    }
   }
 
   const stock = String(deal.stockStatus || '').toLowerCase();
