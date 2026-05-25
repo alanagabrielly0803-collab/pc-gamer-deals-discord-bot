@@ -36,12 +36,14 @@ const commands = [
     .setDescription('Show current deal filters.')
 ].map((command) => command.toJSON());
 
-const rest = new REST({ version: '10' }).setToken(token);
+export async function registerCommands() {
+  const rest = new REST({ version: '10' }).setToken(token);
 
-console.log('Registering guild slash commands...');
+  console.log('Registering guild slash commands...');
 
-await rest.put(Routes.applicationGuildCommands(clientId, guildId), {
-  body: commands
-});
+  await rest.put(Routes.applicationGuildCommands(clientId, guildId), {
+    body: commands
+  });
 
-console.log('Slash commands registered.');
+  console.log('Slash commands registered.');
+}
