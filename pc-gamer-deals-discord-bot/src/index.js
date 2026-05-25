@@ -16,6 +16,7 @@ await loginDiscord();
 
 startScheduler();
 
-setTimeout(() => {
-  runCheck({ post: true });
-}, 10_000);
+// Executa a primeira checagem imediatamente após o bot iniciar
+runCheck({ post: true }).catch((error) => {
+  console.error('[startup] Initial check failed:', error);
+});
