@@ -33,36 +33,35 @@ async function handleDeals(interaction) {
 
   if (!deals.length) {
     await interaction.reply({
-      content: 'No deals stored yet. Use /forcecheck first.',
-      ephemeral: false
+      content: 'No deals stored yet. Use /forcecheck first.'
     });
     return;
   }
 
   await interaction.reply({
-    content: `Showing ${deals.length} recent gamer accessory deal(s):`,
-    ephemeral: false
+    content: `Showing ${deals.length} recent gamer accessory deal(s):`
   });
 
   for (const deal of deals) {
     await interaction.followUp({
-      ...buildDealMessage(deal),
-      ephemeral: false
+      ...buildDealMessage(deal)
     });
   }
 }
 
 async function handleForceCheck(interaction) {
-  await interaction.reply({
-    content: 'Manual check started. New valid deals will be posted publicly in the configured channel.',
-    ephemeral: false
-  });
+  if (interaction.deferred || interaction.replied) {
+    return;
+  }
+
+  await interaction.deferReply();
 
   const result = await runCheck({ post: true });
 
-  await interaction.followUp({
-    content: `Manual check finished. Found: ${result.found}. Posted: ${result.posted}.`,
-    ephemeral: false
+  await interaction.editReply({
+    content: result.skipped
+      ? 'Manual check skipped because another check was already running.'
+      : `Manual check finished. Found: ${result.found}. Posted: ${result.posted}.`
   });
 }
 
@@ -87,8 +86,7 @@ async function handleStatus(interaction) {
       `Discord status: ${state.discordStatus}`,
       `Keep-alive server: running`,
       `Version: ${state.version}`
-    ].join('\n'),
-    ephemeral: false
+    ].join('\n')
   });
 }
 
@@ -105,7 +103,6 @@ async function handleFilters(interaction) {
       `Categories: ${config.monitoredCategories.join(', ')}`,
       `Include keywords: ${config.includeKeywords.join(', ')}`,
       `Exclude keywords: ${config.excludeKeywords.join(', ')}`
-    ].join('\n'),
-    ephemeral: false
+    ].join('\n')
   });
 }
