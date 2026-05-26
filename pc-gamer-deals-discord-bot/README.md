@@ -63,7 +63,8 @@ If you want to force-enable experimental sources locally or on Render, set:
 ENABLE_EXPERIMENTAL_SCRAPING=true
 ```
 
-The bot now posts only products that have an explicit percentage discount. If you want more results, lower `MIN_DISCOUNT_PERCENT`.
+The bot now posts products with an explicit percentage discount and can also surface the lowest price found among similar offers for comparison.
+If you want more results, lower `MIN_DISCOUNT_PERCENT`.
 
 ## Setup
 

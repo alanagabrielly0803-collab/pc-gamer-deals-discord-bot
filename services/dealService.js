@@ -13,6 +13,7 @@ import { fetchMagaluDealsExperimental } from '../sources/magalu.js';
 import { normalizeDeal } from './normalizeDeal.js';
 import { isValidDeal } from './validateDeal.js';
 import { dedupeDeals } from '../utils/dedupe.js';
+import { annotateBestPriceDeals } from '../utils/priceComparison.js';
 
 import { enrichWithPriceTracking, saveSeenDeals } from '../storage/jsonStore.js';
 import { logger } from '../utils/logger.js';
@@ -54,12 +55,14 @@ export async function findDeals() {
 
   const normalized = raw.map(normalizeDeal);
   const withTracking = await enrichWithPriceTracking(normalized);
-  const valid = withTracking.filter(isValidDeal);
-  const unique = dedupeDeals(valid);
+  const candidates = withTracking.filter((deal) => isValidDeal(deal, { allowWithoutDiscount: true }));
+  const unique = dedupeDeals(candidates);
+  const compared = annotateBestPriceDeals(unique);
+  const valid = compared.filter((deal) => isValidDeal(deal) || deal.isBestPriceComparison);
 
-  await saveSeenDeals(unique);
+  await saveSeenDeals(valid);
 
   logger.info(`Deals summary: raw=${raw.length}, valid=${valid.length}, unique=${unique.length}`);
 
-  return unique;
+  return valid;
 }

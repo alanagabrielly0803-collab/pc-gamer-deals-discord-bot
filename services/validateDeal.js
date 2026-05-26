@@ -29,7 +29,9 @@ const forbiddenUrlPatterns = [
   /\/carrinho\b/i
 ];
 
-export function isValidDeal(deal) {
+export function isValidDeal(deal, options = {}) {
+  const allowWithoutDiscount = Boolean(options.allowWithoutDiscount);
+
   if (!deal) return false;
 
   if (!deal.productName || deal.productName.length < 5) return false;
@@ -75,7 +77,7 @@ export function isValidDeal(deal) {
     Number.isFinite(Number(deal.discountPercent)) &&
     deal.discountPercent >= config.minDiscountPercent;
 
-  if (!hasDiscount) {
+  if (!hasDiscount && !allowWithoutDiscount) {
     return false;
   }
 

@@ -5,12 +5,16 @@ import { parsePrice } from './price.js';
 export function buildDealIdentity(deal) {
   const storeSlug = slugify(deal.storeName || deal.store || 'unknown');
   const titleSlug = slugify(deal.productName || deal.title || '');
+  const brandSlug = slugify(deal.brand || '');
+  const modelSlug = slugify(deal.model || '');
   const url = canonicalUrl(deal.productUrl || deal.url);
   const price = parsePrice(deal.currentPrice);
+  const comparisonKey = [brandSlug, modelSlug].filter(Boolean).join(':') || titleSlug;
 
   return {
     storeSlug,
     titleSlug,
+    comparisonKey,
     canonicalUrl: url,
     priceKey: price === null ? 'unknown' : String(price),
     productKey: `${storeSlug}:${titleSlug}`,

@@ -67,11 +67,12 @@ export function normalizeDeal(raw) {
   };
 
   const identity = buildDealIdentity(deal);
-  deal.storeSlug = identity.storeSlug;
-  deal.titleSlug = identity.titleSlug;
-  deal.productKey = identity.productKey;
-  deal.dealKey = identity.dealKey;
-  deal.urlKey = identity.urlKey;
+    deal.storeSlug = identity.storeSlug;
+    deal.titleSlug = identity.titleSlug;
+    deal.comparisonKey = identity.comparisonKey;
+    deal.productKey = identity.productKey;
+    deal.dealKey = identity.dealKey;
+    deal.urlKey = identity.urlKey;
   deal.uniqueKey = identity.urlKey || identity.dealKey;
 
   return deal;

@@ -32,31 +32,38 @@ function addField(fields, name, value, inline = true) {
 export function buildDealMessage(deal) {
   const fields = [];
 
-  addField(fields, '🛒 Store', deal.storeName);
-  addField(fields, '🏷️ Category', deal.category);
-  addField(fields, '💰 Current price', deal.currentPriceText);
-  addField(fields, '📉 Original price', deal.originalPriceText);
-  addField(fields, '🔥 Discount', deal.discountPercent !== null ? `${deal.discountPercent}% OFF` : null);
-  addField(fields, '🎟️ Coupon', deal.couponCode);
-  addField(fields, '💳 Payment', deal.paymentDetails);
-  addField(fields, '💵 Installments', deal.installmentPrice);
-  addField(fields, '📦 Stock', deal.stockStatus);
-  addField(fields, '🚚 Shipping', deal.shippingInfo);
-  addField(fields, '⭐ Rating', deal.rating ? `${deal.rating}${deal.reviewCount ? ` (${deal.reviewCount} reviews)` : ''}` : null);
-  addField(fields, '⏰ Deal ends', deal.dealEndsAt ? new Date(deal.dealEndsAt).toUTCString() : null);
-  addField(fields, '🕒 Time remaining', deal.timeRemaining);
-  addField(fields, '🏭 Brand / Model', [deal.brand, deal.model].filter(Boolean).join(' / '));
-  addField(fields, '⚙️ Specs', deal.specs, false);
-  addField(fields, '🕒 Found at', new Date(deal.foundAt).toLocaleString('pt-BR'), false);
+  addField(fields, 'Store', deal.storeName);
+  addField(fields, 'Category', deal.category);
+  addField(fields, 'Current price', deal.currentPriceText);
+  addField(fields, 'Original price', deal.originalPriceText);
+  addField(fields, 'Discount', deal.discountPercent !== null ? `${deal.discountPercent}% OFF` : null);
+  addField(fields, 'Coupon', deal.couponCode);
+  addField(fields, 'Payment', deal.paymentDetails);
+  addField(fields, 'Installments', deal.installmentPrice);
+  addField(fields, 'Stock', deal.stockStatus);
+  addField(fields, 'Shipping', deal.shippingInfo);
+  addField(
+    fields,
+    'Rating',
+    deal.rating ? `${deal.rating}${deal.reviewCount ? ` (${deal.reviewCount} reviews)` : ''}` : null
+  );
+  addField(fields, 'Deal ends', deal.dealEndsAt ? new Date(deal.dealEndsAt).toUTCString() : null);
+  addField(fields, 'Time remaining', deal.timeRemaining);
+  addField(fields, 'Brand / Model', [deal.brand, deal.model].filter(Boolean).join(' / '));
+  addField(fields, 'Specs', deal.specs, false);
+  addField(fields, 'Found at', new Date(deal.foundAt).toLocaleString('pt-BR'), false);
 
   const title = deal.priceDropText
-    ? `📉 Price drop: ${deal.productName}`
-    : deal.isFlashSale
-      ? `⚡ Flash deal: ${deal.productName}`
-      : `🔥 Gamer accessory deal: ${deal.productName}`;
+    ? `Price drop: ${deal.productName}`
+    : deal.isBestPriceComparison
+      ? `Lowest price found: ${deal.productName}`
+      : deal.isFlashSale
+        ? `Flash deal: ${deal.productName}`
+        : `Gamer accessory deal: ${deal.productName}`;
 
   const descriptionParts = [
     deal.priceDropText,
+    deal.comparisonText,
     deal.description,
     deal.discountPercent !== null ? `Discount detected: ${deal.discountPercent}% OFF.` : null
   ].filter(Boolean);
