@@ -3,11 +3,29 @@ import cron from 'node-cron';
 import { config } from './config.js';
 import { state } from './state.js';
 import { findDeals } from './services/dealService.js';
-import { postNewDeals } from './discord/poster.js';
+import { postNewDeals, purgeBotPosts } from './discord/poster.js';
 
 let isChecking = false;
 
-export async function runCheck({ post = true } = {}) {
+async function executeCheck({ post = true } = {}) {
+  console.log('[scheduler] Checking for gamer accessory deals...');
+
+  const deals = await findDeals();
+  const posted = post ? await postNewDeals(deals, config.maxPostsPerCheck) : 0;
+
+  state.lastCheck = new Date().toISOString();
+  state.lastRunFound = deals.length;
+  state.lastRunPosted = posted;
+  state.totalDealsFound += deals.length;
+  state.totalDealsPosted += posted;
+  state.lastError = null;
+
+  console.log(`[scheduler] Check complete. Found=${deals.length}, Posted=${posted}`);
+
+  return { found: deals.length, posted };
+}
+
+async function withCheckLock(task) {
   if (isChecking) {
     console.log('[scheduler] Check skipped because another check is already running.');
     return { found: 0, posted: 0, skipped: true };
@@ -16,21 +34,7 @@ export async function runCheck({ post = true } = {}) {
   isChecking = true;
 
   try {
-    console.log('[scheduler] Checking for gamer accessory deals...');
-
-    const deals = await findDeals();
-    const posted = post ? await postNewDeals(deals, config.maxPostsPerCheck) : 0;
-
-    state.lastCheck = new Date().toISOString();
-    state.lastRunFound = deals.length;
-    state.lastRunPosted = posted;
-    state.totalDealsFound += deals.length;
-    state.totalDealsPosted += posted;
-    state.lastError = null;
-
-    console.log(`[scheduler] Check complete. Found=${deals.length}, Posted=${posted}`);
-
-    return { found: deals.length, posted };
+    return await task();
   } catch (error) {
     state.lastError = error.message;
     console.error('[scheduler] Check failed:', error);
@@ -38,6 +42,24 @@ export async function runCheck({ post = true } = {}) {
   } finally {
     isChecking = false;
   }
+}
+
+export async function runCheck({ post = true } = {}) {
+  return withCheckLock(() => executeCheck({ post }));
+}
+
+export async function refreshDeals() {
+  return withCheckLock(async () => {
+    console.log('[scheduler] Refreshing deals: cleaning old bot posts and reposting current offers...');
+
+    const deleted = await purgeBotPosts();
+    const result = await executeCheck({ post: true });
+
+    return {
+      deleted,
+      ...result
+    };
+  });
 }
 
 export function startScheduler() {

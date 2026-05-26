@@ -28,6 +28,10 @@ const commands = [
     .setDescription('Manually search and publicly post new deals.'),
 
   new SlashCommandBuilder()
+    .setName('refreshdeals')
+    .setDescription('Delete old bot posts in the deals channel and repost the latest deals.'),
+
+  new SlashCommandBuilder()
     .setName('status')
     .setDescription('Show bot status.'),
 

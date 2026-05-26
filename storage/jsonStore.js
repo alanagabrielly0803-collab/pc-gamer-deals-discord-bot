@@ -51,6 +51,10 @@ export async function writeDb(data) {
   await fs.writeFile(DB_FILE, JSON.stringify(data, null, 2));
 }
 
+export async function resetDb() {
+  await writeDb(structuredClone(initialData));
+}
+
 export async function enrichWithPriceTracking(deals) {
   const db = await readDb();
 

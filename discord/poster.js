@@ -1,7 +1,7 @@
 import { config } from '../config.js';
 import { client } from './client.js';
 import { buildDealMessage } from './embeds.js';
-import { hasPosted, markPosted } from '../storage/jsonStore.js';
+import { hasPosted, markPosted, resetDb } from '../storage/jsonStore.js';
 
 export async function getTargetChannel() {
   const channel = await client.channels.fetch(config.channelId);
@@ -47,4 +47,39 @@ export async function postNewDeals(deals, limit = config.maxPostsPerCheck) {
   }
 
   return posted;
+}
+
+export async function purgeBotPosts() {
+  const channel = await getTargetChannel();
+  const botUserId = client.user?.id;
+
+  if (!botUserId) {
+    throw new Error('Discord client is not ready.');
+  }
+
+  let before;
+  let deleted = 0;
+
+  for (;;) {
+    const messages = await channel.messages.fetch({ limit: 100, before });
+    if (!messages.size) break;
+
+    for (const message of messages.values()) {
+      if (message.author?.id !== botUserId) continue;
+
+      try {
+        await message.delete();
+        deleted += 1;
+      } catch (error) {
+        console.warn('[discord] Failed to delete old bot message:', error.message);
+      }
+    }
+
+    before = messages.last()?.id;
+    if (!before || messages.size < 100) break;
+  }
+
+  await resetDb();
+
+  return deleted;
 }

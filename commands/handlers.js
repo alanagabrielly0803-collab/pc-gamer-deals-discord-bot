@@ -2,7 +2,8 @@ import { config } from '../config.js';
 import { state, getUptimeSeconds } from '../state.js';
 import { getRecentDeals, getStats } from '../storage/jsonStore.js';
 import { buildDealMessage } from '../discord/embeds.js';
-import { runCheck } from '../scheduler.js';
+import { refreshDeals, runCheck } from '../scheduler.js';
+import { MessageFlags, PermissionsBitField } from 'discord.js';
 
 export async function handleInteraction(interaction) {
   if (!interaction.isChatInputCommand()) return;
@@ -14,6 +15,11 @@ export async function handleInteraction(interaction) {
 
   if (interaction.commandName === 'forcecheck') {
     await handleForceCheck(interaction);
+    return;
+  }
+
+  if (interaction.commandName === 'refreshdeals') {
+    await handleRefreshDeals(interaction);
     return;
   }
 
@@ -62,6 +68,34 @@ async function handleForceCheck(interaction) {
     content: result.skipped
       ? 'Manual check skipped because another check was already running.'
       : `Manual check finished. Found: ${result.found}. Posted: ${result.posted}.`
+  });
+}
+
+async function handleRefreshDeals(interaction) {
+  const perms = interaction.memberPermissions;
+  const canModerate =
+    perms?.has(PermissionsBitField.Flags.ManageMessages) ||
+    perms?.has(PermissionsBitField.Flags.Administrator);
+
+  if (!canModerate) {
+    await interaction.reply({
+      content: 'You need Manage Messages or Administrator permission to run this command.',
+      flags: MessageFlags.Ephemeral
+    });
+    return;
+  }
+
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+  const result = await refreshDeals();
+
+  await interaction.editReply({
+    content: [
+      `Cleanup finished. Deleted ${result.deleted || 0} old bot message(s).`,
+      result.skipped
+        ? 'The repost was skipped because another check was already running.'
+        : `Repost finished. Found: ${result.found}. Posted: ${result.posted}.`
+    ].join(' ')
   });
 }
 

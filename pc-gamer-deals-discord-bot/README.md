@@ -94,6 +94,7 @@ Commit:
 
 - `/deals`
 - `/forcecheck`
+- `/refreshdeals`
 - `/status`
 - `/filters`
 
