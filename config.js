@@ -3,8 +3,7 @@ import dotenv from 'dotenv';
 import {
   DISCOVERY_TERMS,
   EXCLUDE_KEYWORDS,
-  MONITORED_CATEGORIES,
-  MONITORED_STORES
+  MONITORED_CATEGORIES
 } from './utils/dealTaxonomy.js';
 
 dotenv.config();
@@ -48,12 +47,10 @@ export const config = {
   minDiscountPercent: Math.max(1, numberValue('MIN_DISCOUNT_PERCENT', 1)),
   maxPrice: numberValue('MAX_PRICE', null),
 
-  enableExperimentalScraping: booleanValue('ENABLE_EXPERIMENTAL_SCRAPING', true),
-
   includeKeywords: stringList('INCLUDE_KEYWORDS', DISCOVERY_TERMS),
   excludeKeywords: stringList('EXCLUDE_KEYWORDS', EXCLUDE_KEYWORDS),
   monitoredCategories: stringList('MONITORED_CATEGORIES', MONITORED_CATEGORIES),
-  monitoredStores: stringList('MONITORED_STORES', MONITORED_STORES),
+  monitoredStores: stringList('MONITORED_STORES', ['Mercado Livre', 'Kalunga']),
 
-  version: '1.1.6'
+  version: '1.1.7'
 };

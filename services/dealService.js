@@ -1,14 +1,5 @@
-import { config } from '../config.js';
-
 import { fetchMercadoLivreDeals } from '../sources/mercadolivre.js';
 import { fetchKalungaDeals } from '../sources/kalunga.js';
-import { fetchAmazonDeals } from '../sources/amazon.js';
-import { fetchAliExpressDeals } from '../sources/aliexpress.js';
-import { fetchShopeeDeals } from '../sources/shopee.js';
-import { fetchKabumDealsExperimental } from '../sources/kabum.js';
-import { fetchTerabyteDealsExperimental } from '../sources/terabyte.js';
-import { fetchPichauDealsExperimental } from '../sources/pichau.js';
-import { fetchMagaluDealsExperimental } from '../sources/magalu.js';
 
 import { normalizeDeal } from './normalizeDeal.js';
 import { isValidDeal } from './validateDeal.js';
@@ -32,20 +23,8 @@ async function safeFetch(name, fn) {
 export async function findDeals() {
   const fetchers = [
     ['Mercado Livre', fetchMercadoLivreDeals],
-    ['Kalunga', fetchKalungaDeals],
-    ['Amazon', fetchAmazonDeals],
-    ['AliExpress', fetchAliExpressDeals],
-    ['Shopee', fetchShopeeDeals]
+    ['Kalunga', fetchKalungaDeals]
   ];
-
-  if (config.enableExperimentalScraping) {
-    fetchers.push(['Kabum Experimental', fetchKabumDealsExperimental]);
-    fetchers.push(['Terabyte Experimental', fetchTerabyteDealsExperimental]);
-    fetchers.push(['Pichau Experimental', fetchPichauDealsExperimental]);
-    fetchers.push(['Magalu Experimental', fetchMagaluDealsExperimental]);
-  } else {
-    logger.info('Experimental scraping disabled. Kabum, Terabyte, Pichau and Magalu scraping will not run.');
-  }
 
   const raw = [];
 

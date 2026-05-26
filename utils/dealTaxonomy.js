@@ -130,15 +130,3 @@ export const MONITORED_CATEGORIES = [
   'Motherboard',
   'Power Supply'
 ];
-
-export const MONITORED_STORES = [
-  'Mercado Livre',
-  'Kalunga',
-  'Amazon',
-  'Kabum',
-  'TerabyteShop',
-  'Pichau',
-  'Magazine Luiza',
-  'AliExpress',
-  'Shopee'
-];

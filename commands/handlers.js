@@ -98,7 +98,6 @@ async function handleFilters(interaction) {
       `Max posts per check: ${config.maxPostsPerCheck}`,
       `Minimum percentage discount: ${config.minDiscountPercent}%`,
       `Maximum price: ${config.maxPrice === null ? 'Not set' : `R$ ${config.maxPrice}`}`,
-      `Experimental scraping: ${config.enableExperimentalScraping ? 'enabled' : 'disabled'}`,
       `Stores: ${config.monitoredStores.join(', ')}`,
       `Categories: ${config.monitoredCategories.join(', ')}`,
       `Include keywords: ${config.includeKeywords.join(', ')}`,
