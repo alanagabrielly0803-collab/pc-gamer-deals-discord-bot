@@ -40,6 +40,7 @@ export const config = {
   maxPostsPerCheck: Math.max(1, numberValue('MAX_POSTS_PER_CHECK', 20)),
   minDiscountPercent: Math.max(0, numberValue('MIN_DISCOUNT_PERCENT', 5)),
   maxPrice: numberValue('MAX_PRICE', null),
+  goodPriceCap: Math.max(0, numberValue('GOOD_PRICE_CAP', 350)),
 
   enableExperimentalScraping: booleanValue('ENABLE_EXPERIMENTAL_SCRAPING', true),
 
@@ -135,5 +136,5 @@ export const config = {
     'Shopee'
   ]),
 
-  version: '1.1.2'
+  version: '1.1.3'
 };

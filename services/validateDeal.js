@@ -122,19 +122,36 @@ export function isValidDeal(deal) {
 
   const hasPriceDrop = Boolean(deal.priceDropText);
   const hasPromotionSignal = Boolean(deal.isFlashSale);
+  const hasBudgetFriendlyPrice =
+    Number.isFinite(currentPrice) && currentPrice <= config.goodPriceCap;
 
   if (!hasDiscount && !hasPriceDrop && !hasPromotionSignal) {
-    if (!isMarketplaceFallback) {
-      return false;
+    if (!hasBudgetFriendlyPrice) {
+      if (!isMarketplaceFallback) {
+        return false;
+      }
+
+      const titleLooksRelevant = containsAny(
+        textForMatching,
+        [...config.includeKeywords, ...accessoryHints]
+      );
+
+      if (!titleLooksRelevant) {
+        return false;
+      }
+    } else if (!isMarketplaceFallback) {
+      const titleLooksRelevant = containsAny(
+        textForMatching,
+        [...config.includeKeywords, ...accessoryHints]
+      );
+
+      if (!titleLooksRelevant) {
+        return false;
+      }
     }
 
-    const titleLooksRelevant = containsAny(
-      textForMatching,
-      [...config.includeKeywords, ...accessoryHints]
-    );
-
-    if (!titleLooksRelevant) {
-      return false;
+    if (!isMarketplaceFallback) {
+      return true;
     }
   }
 

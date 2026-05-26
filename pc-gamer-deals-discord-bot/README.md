@@ -22,6 +22,14 @@ Discord bot for monitoring gamer accessory deals and posting public permanent em
 
 Brazilian retail pages often change markup, use bot protection, or render parts of the catalog client-side. This project now enables experimental scraping by default, so Kabum, Terabyte, Pichau, and Magalu can be searched too. If you want to turn them off, set `ENABLE_EXPERIMENTAL_SCRAPING=false`.
 
+For marketplaces and official affiliate APIs, the bot is designed around these sources:
+
+- Mercado Livre public search API for broad marketplace coverage.
+- Kalunga public catalog pages for a reliable retail catalog.
+- Shopee Open Platform or affiliate API when credentials are configured.
+- AliExpress affiliate API when credentials are configured.
+- Amazon Creators API, not the deprecated PA-API, when credentials are configured.
+
 ### Limitations
 
 - Prices can change quickly.
@@ -54,7 +62,7 @@ If you want to force-enable experimental sources locally or on Render, set:
 ENABLE_EXPERIMENTAL_SCRAPING=true
 ```
 
-You can also lower `MIN_DISCOUNT_PERCENT` a bit if you want the bot to accept smaller discounts.
+If you want more accessory deals instead of only explicit markdowns, lower `MIN_DISCOUNT_PERCENT` and tune `GOOD_PRICE_CAP`.
 
 ## Setup
 
@@ -70,6 +78,7 @@ CHANNEL_ID=
 CHECK_INTERVAL_MINUTES=30
 MAX_POSTS_PER_CHECK=10
 MIN_DISCOUNT_PERCENT=10
+GOOD_PRICE_CAP=350
 MAX_PRICE=
 ENABLE_EXPERIMENTAL_SCRAPING=true
 PORT=3000
