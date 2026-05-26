@@ -45,9 +45,8 @@ export const config = {
   port: numberValue('PORT', 3000),
   checkIntervalMinutes: Math.max(5, numberValue('CHECK_INTERVAL_MINUTES', 30)),
   maxPostsPerCheck: Math.max(1, numberValue('MAX_POSTS_PER_CHECK', 20)),
-  minDiscountPercent: Math.max(0, numberValue('MIN_DISCOUNT_PERCENT', 5)),
+  minDiscountPercent: Math.max(1, numberValue('MIN_DISCOUNT_PERCENT', 1)),
   maxPrice: numberValue('MAX_PRICE', null),
-  goodPriceCap: Math.max(0, numberValue('GOOD_PRICE_CAP', 350)),
 
   enableExperimentalScraping: booleanValue('ENABLE_EXPERIMENTAL_SCRAPING', true),
 
@@ -56,5 +55,5 @@ export const config = {
   monitoredCategories: stringList('MONITORED_CATEGORIES', MONITORED_CATEGORIES),
   monitoredStores: stringList('MONITORED_STORES', MONITORED_STORES),
 
-  version: '1.1.4'
+  version: '1.1.6'
 };

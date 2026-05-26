@@ -63,7 +63,7 @@ If you want to force-enable experimental sources locally or on Render, set:
 ENABLE_EXPERIMENTAL_SCRAPING=true
 ```
 
-If you want more accessory deals instead of only explicit markdowns, lower `MIN_DISCOUNT_PERCENT` and tune `GOOD_PRICE_CAP`.
+The bot now posts only products that have an explicit percentage discount. If you want more results, lower `MIN_DISCOUNT_PERCENT`.
 
 ## Setup
 
@@ -78,8 +78,7 @@ GUILD_ID=
 CHANNEL_ID=
 CHECK_INTERVAL_MINUTES=30
 MAX_POSTS_PER_CHECK=10
-MIN_DISCOUNT_PERCENT=10
-GOOD_PRICE_CAP=350
+MIN_DISCOUNT_PERCENT=1
 MAX_PRICE=
 ENABLE_EXPERIMENTAL_SCRAPING=true
 PORT=3000

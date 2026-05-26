@@ -70,49 +70,13 @@ export function isValidDeal(deal) {
     return false;
   }
 
-  const isMarketplaceFallback =
-    /mercado livre/i.test(String(deal.storeName || '')) ||
-    /html search fallback/i.test(String(deal.source || '')) ||
-    /public search api/i.test(String(deal.source || ''));
-
   const hasDiscount =
     deal.discountPercent !== null &&
     Number.isFinite(Number(deal.discountPercent)) &&
     deal.discountPercent >= config.minDiscountPercent;
 
-  const hasPriceDrop = Boolean(deal.priceDropText);
-  const hasPromotionSignal = Boolean(deal.isFlashSale);
-  const hasBudgetFriendlyPrice =
-    Number.isFinite(currentPrice) && currentPrice <= config.goodPriceCap;
-
-  if (!hasDiscount && !hasPriceDrop && !hasPromotionSignal) {
-    if (!hasBudgetFriendlyPrice) {
-      if (!isMarketplaceFallback) {
-        return false;
-      }
-
-      const titleLooksRelevant = containsAny(
-        textForMatching,
-        [...config.includeKeywords, ...RELEVANT_PRODUCT_HINTS]
-      );
-
-      if (!titleLooksRelevant) {
-        return false;
-      }
-    } else if (!isMarketplaceFallback) {
-      const titleLooksRelevant = containsAny(
-        textForMatching,
-        [...config.includeKeywords, ...RELEVANT_PRODUCT_HINTS]
-      );
-
-      if (!titleLooksRelevant) {
-        return false;
-      }
-    }
-
-    if (!isMarketplaceFallback) {
-      return true;
-    }
+  if (!hasDiscount) {
+    return false;
   }
 
   const stock = String(deal.stockStatus || '').toLowerCase();
