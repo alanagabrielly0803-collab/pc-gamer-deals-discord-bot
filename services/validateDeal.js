@@ -54,7 +54,6 @@ const accessoryHints = [
   'cadeira gamer',
   'mesa gamer',
   'suporte para headset',
-  'braço articulado',
   'braco articulado',
   'stream deck',
   'ring light',
