@@ -20,7 +20,7 @@ Discord bot for monitoring gamer accessory deals and posting public permanent em
 
 ### Why most scraping is experimental
 
-Brazilian retail pages often change markup, use bot protection, or render parts of the catalog client-side. This project avoids aggressive scraping by default. `ENABLE_EXPERIMENTAL_SCRAPING=false` keeps Kabum, Terabyte, Pichau, and Magalu scraping disabled unless you intentionally enable it.
+Brazilian retail pages often change markup, use bot protection, or render parts of the catalog client-side. This project now enables experimental scraping by default, so Kabum, Terabyte, Pichau, and Magalu can be searched too. If you want to turn them off, set `ENABLE_EXPERIMENTAL_SCRAPING=false`.
 
 ### Limitations
 
@@ -48,7 +48,7 @@ The bot uses:
 The discovery pass is focused on gamer accessories and peripherals: keyboards, mice, headsets, mousepads, microphones, webcams, controllers, USB hubs, capture cards, chairs and similar items.
 Kalunga is now included as an always-on source, so the bot has one more large retail catalog to search without needing experimental scraping.
 
-If you want even more results, enable:
+If you want to force-enable experimental sources locally or on Render, set:
 
 ```env
 ENABLE_EXPERIMENTAL_SCRAPING=true
@@ -71,7 +71,7 @@ CHECK_INTERVAL_MINUTES=30
 MAX_POSTS_PER_CHECK=10
 MIN_DISCOUNT_PERCENT=10
 MAX_PRICE=
-ENABLE_EXPERIMENTAL_SCRAPING=false
+ENABLE_EXPERIMENTAL_SCRAPING=true
 PORT=3000
 ```
 

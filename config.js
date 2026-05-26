@@ -41,7 +41,7 @@ export const config = {
   minDiscountPercent: Math.max(0, numberValue('MIN_DISCOUNT_PERCENT', 5)),
   maxPrice: numberValue('MAX_PRICE', null),
 
-  enableExperimentalScraping: booleanValue('ENABLE_EXPERIMENTAL_SCRAPING', false),
+  enableExperimentalScraping: booleanValue('ENABLE_EXPERIMENTAL_SCRAPING', true),
 
   includeKeywords: stringList('INCLUDE_KEYWORDS', [
     'teclado gamer',
@@ -135,5 +135,5 @@ export const config = {
     'Shopee'
   ]),
 
-  version: '1.1.1'
+  version: '1.1.2'
 };
