@@ -22,6 +22,15 @@ const BOOST_SEARCH_TERMS = [
   'mousepad',
   'controle xbox',
   'controle playstation',
+  'console gamer',
+  'playstation 5',
+  'ps5',
+  'xbox series x',
+  'xbox series s',
+  'nintendo switch',
+  'notebook gamer',
+  'notebook',
+  'laptop gamer',
   'microfone usb',
   'microfone gamer',
   'webcam full hd',
@@ -32,9 +41,20 @@ const BOOST_SEARCH_TERMS = [
   'placa de captura',
   'cadeira gamer',
   'mesa gamer',
+  'monitor gamer',
+  'monitor 144hz',
+  'monitor 165hz',
+  'monitor 240hz',
+  'placa de video',
+  'placa video',
+  'rtx',
+  'radeon',
+  'processador',
+  'ryzen',
+  'intel core',
   'suporte para headset',
-  'braço articulado',
   'braco articulado',
+  'braço articulado',
   'stream deck',
   'ring light',
   'mouse bungee',
@@ -67,23 +87,26 @@ function classifyCategory(title) {
   if (value.includes('mouse')) return 'Gaming Mouse';
   if (value.includes('headset') || value.includes('fone')) return 'Gaming Headset';
   if (value.includes('monitor')) return 'Monitor';
+  if (value.includes('console') || value.includes('playstation') || value.includes('xbox') || value.includes('switch')) {
+    return 'Console';
+  }
+  if (value.includes('notebook') || value.includes('laptop')) return 'Gaming Notebook';
   if (value.includes('ssd')) return 'SSD';
-  if (value.includes('memória') || value.includes('memoria') || value.includes('ram')) return 'RAM';
+  if (value.includes('memoria') || value.includes('memória') || value.includes('ram')) return 'RAM';
   if (
-    value.includes('placa de vídeo') ||
     value.includes('placa de video') ||
+    value.includes('placa de vídeo') ||
     value.includes('rtx') ||
     value.includes('radeon')
   ) {
     return 'Graphics Card';
   }
   if (value.includes('processador') || value.includes('ryzen') || value.includes('intel')) return 'Processor';
-  if (value.includes('placa mãe') || value.includes('placa mae') || value.includes('motherboard')) return 'Motherboard';
+  if (value.includes('placa mae') || value.includes('placa mãe') || value.includes('motherboard')) return 'Motherboard';
   if (value.includes('fonte')) return 'Power Supply';
   if (value.includes('cooler') || value.includes('water cooler')) return 'CPU Cooler';
   if (value.includes('cadeira')) return 'Gaming Chair';
   if (value.includes('controle')) return 'Controller';
-  if (value.includes('notebook') || value.includes('laptop')) return 'Laptop';
   if (value.includes('gabinete')) return 'PC Case';
 
   return 'PC Gamer Accessory';
@@ -246,7 +269,7 @@ async function fetchMercadoLivreHtmlDeals(keyword) {
         brand: null,
         model: null,
         specs: null,
-        shippingInfo: card.text().toLowerCase().includes('frete grátis') ? 'Frete grátis' : null,
+        shippingInfo: card.text().toLowerCase().includes('frete gratis') ? 'Frete gratis' : null,
         rating: null,
         reviewCount: null,
         isFlashSale: Boolean(originalPrice && currentPrice && originalPrice > currentPrice),
@@ -283,7 +306,7 @@ function mapMercadoLivreApiItem(item) {
     brand: item.attributes?.find((attr) => attr.id === 'BRAND')?.value_name || null,
     model: item.attributes?.find((attr) => attr.id === 'MODEL')?.value_name || null,
     specs: null,
-    shippingInfo: item.shipping?.free_shipping ? 'Frete grátis' : null,
+    shippingInfo: item.shipping?.free_shipping ? 'Frete gratis' : null,
     rating: null,
     reviewCount: null,
     isFlashSale: Boolean(item.sale_price),

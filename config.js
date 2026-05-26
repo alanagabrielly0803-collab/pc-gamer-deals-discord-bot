@@ -52,5 +52,5 @@ export const config = {
   monitoredCategories: stringList('MONITORED_CATEGORIES', MONITORED_CATEGORIES),
   monitoredStores: stringList('MONITORED_STORES', ['Mercado Livre', 'Kalunga']),
 
-  version: '1.1.7'
+  version: '1.1.8'
 };

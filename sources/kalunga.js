@@ -1,8 +1,6 @@
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 
-import { parsePrice } from '../utils/price.js';
-
 const USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36';
 const BASE_URL = 'https://www.kalunga.com.br';
@@ -21,7 +19,15 @@ const SEARCHES = [
   ['controle-gamer', 'Controller'],
   ['hub-usb', 'USB Hub'],
   ['suporte-headset', 'Gaming Accessory'],
-  ['kit-gamer', 'Gaming Accessory']
+  ['kit-gamer', 'Gaming Accessory'],
+  ['cadeira-gamer', 'Gaming Chair'],
+  ['notebook-gamer', 'Gaming Notebook'],
+  ['console', 'Console'],
+  ['playstation-5', 'Console'],
+  ['xbox-series-x', 'Console'],
+  ['xbox-series-s', 'Console'],
+  ['placa-de-video', 'Graphics Card'],
+  ['processador', 'Processor']
 ];
 
 function uniqueBy(items, selector) {
@@ -73,6 +79,13 @@ function classifyCategory(title) {
   if (value.includes('hub usb') || value.includes('usb hub')) return 'USB Hub';
   if (value.includes('suporte')) return 'Gaming Accessory';
   if (value.includes('kit')) return 'Gaming Accessory';
+  if (value.includes('cadeira')) return 'Gaming Chair';
+  if (value.includes('console') || value.includes('playstation') || value.includes('xbox') || value.includes('switch')) return 'Console';
+  if (value.includes('notebook') || value.includes('laptop')) return 'Gaming Notebook';
+  if (value.includes('placa de video') || value.includes('placa de vídeo') || value.includes('rtx') || value.includes('radeon')) {
+    return 'Graphics Card';
+  }
+  if (value.includes('processador') || value.includes('ryzen') || value.includes('intel')) return 'Processor';
 
   return 'PC Gamer Accessory';
 }
