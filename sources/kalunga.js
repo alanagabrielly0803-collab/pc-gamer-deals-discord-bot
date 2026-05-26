@@ -14,6 +14,10 @@ const SEARCHES = [
   ['teclado-gamer', 'Gaming Keyboard'],
   ['microfone-gamer', 'Microphone'],
   ['webcam', 'Webcam'],
+  ['monitor-gamer', 'Monitor'],
+  ['memoria-ram', 'RAM'],
+  ['memoria-ram-ddr4', 'RAM'],
+  ['water-cooler', 'CPU Cooler'],
   ['controle-gamer', 'Controller'],
   ['hub-usb', 'USB Hub'],
   ['suporte-headset', 'Gaming Accessory'],
@@ -60,6 +64,11 @@ function classifyCategory(title) {
   if (value.includes('headset') || value.includes('fone')) return 'Gaming Headset';
   if (value.includes('microfone')) return 'Microphone';
   if (value.includes('webcam')) return 'Webcam';
+  if (value.includes('monitor')) return 'Monitor';
+  if (value.includes('memoria') || value.includes('memória') || value.includes('ram')) return 'RAM';
+  if (value.includes('water cooler') || value.includes('watercooler') || value.includes('cooler liquido') || value.includes('cooler líquido')) {
+    return 'CPU Cooler';
+  }
   if (value.includes('controle')) return 'Controller';
   if (value.includes('hub usb') || value.includes('usb hub')) return 'USB Hub';
   if (value.includes('suporte')) return 'Gaming Accessory';

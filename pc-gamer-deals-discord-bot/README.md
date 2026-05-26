@@ -53,8 +53,9 @@ The bot uses:
 
 ## Search improvements
 
-The discovery pass is focused on gamer accessories and peripherals: keyboards, mice, headsets, mousepads, microphones, webcams, controllers, USB hubs, capture cards, chairs and similar items.
+The discovery pass is focused on gamer accessories and practical upgrades: keyboards, mice, headsets, mousepads, microphones, webcams, controllers, USB hubs, capture cards, chairs, monitors, RAM, water coolers and similar items.
 Kalunga is now included as an always-on source, so the bot has one more large retail catalog to search without needing experimental scraping.
+The product taxonomy is centralized in `utils/dealTaxonomy.js`, which keeps keywords, categories and store lists grouped instead of scattered through the codebase.
 
 If you want to force-enable experimental sources locally or on Render, set:
 

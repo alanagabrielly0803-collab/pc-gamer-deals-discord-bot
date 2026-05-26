@@ -1,4 +1,5 @@
 import { config } from '../config.js';
+import { RELEVANT_PRODUCT_HINTS } from '../utils/dealTaxonomy.js';
 import { containsAny } from '../utils/text.js';
 import { isLikelyProductPage } from '../utils/url.js';
 import { parsePrice } from '../utils/price.js';
@@ -26,47 +27,6 @@ const forbiddenUrlPatterns = [
   /\/login\b/i,
   /\/cart\b/i,
   /\/carrinho\b/i
-];
-
-const accessoryHints = [
-  'teclado',
-  'teclado mecanico',
-  'mouse',
-  'mouse sem fio',
-  'mouse wireless',
-  'headset',
-  'headset sem fio',
-  'fone',
-  'fone sem fio',
-  'mousepad',
-  'desk mat',
-  'microfone',
-  'microfone usb',
-  'webcam',
-  'controle',
-  'controle xbox',
-  'controle playstation',
-  'volante',
-  'hub usb',
-  'usb hub',
-  'capture card',
-  'placa de captura',
-  'cadeira gamer',
-  'mesa gamer',
-  'suporte para headset',
-  'braco articulado',
-  'stream deck',
-  'ring light',
-  'mouse bungee',
-  'paracord mouse',
-  'carregador sem fio',
-  'base carregamento',
-  'cabo usb',
-  'cabo usb c',
-  'gamer accessory',
-  'gaming accessory',
-  'peripheral',
-  'peripherals'
 ];
 
 export function isValidDeal(deal) {
@@ -103,8 +63,8 @@ export function isValidDeal(deal) {
 
   const hasConfiguredKeyword = config.includeKeywords.length > 0 && containsAny(textForMatching, config.includeKeywords);
   const hasMonitoredCategory = config.monitoredCategories.length > 0 && containsAny(deal.category || '', config.monitoredCategories);
-  const hasAccessoryHint = containsAny(textForMatching, accessoryHints);
-  const hasRelevantSignal = hasConfiguredKeyword || hasMonitoredCategory || hasAccessoryHint;
+  const hasRelevantHint = containsAny(textForMatching, RELEVANT_PRODUCT_HINTS);
+  const hasRelevantSignal = hasConfiguredKeyword || hasMonitoredCategory || hasRelevantHint;
 
   if (!hasRelevantSignal) {
     return false;
@@ -133,7 +93,7 @@ export function isValidDeal(deal) {
 
       const titleLooksRelevant = containsAny(
         textForMatching,
-        [...config.includeKeywords, ...accessoryHints]
+        [...config.includeKeywords, ...RELEVANT_PRODUCT_HINTS]
       );
 
       if (!titleLooksRelevant) {
@@ -142,7 +102,7 @@ export function isValidDeal(deal) {
     } else if (!isMarketplaceFallback) {
       const titleLooksRelevant = containsAny(
         textForMatching,
-        [...config.includeKeywords, ...accessoryHints]
+        [...config.includeKeywords, ...RELEVANT_PRODUCT_HINTS]
       );
 
       if (!titleLooksRelevant) {

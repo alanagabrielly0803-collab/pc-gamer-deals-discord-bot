@@ -1,5 +1,12 @@
 import dotenv from 'dotenv';
 
+import {
+  DISCOVERY_TERMS,
+  EXCLUDE_KEYWORDS,
+  MONITORED_CATEGORIES,
+  MONITORED_STORES
+} from './utils/dealTaxonomy.js';
+
 dotenv.config();
 
 function required(name) {
@@ -44,97 +51,10 @@ export const config = {
 
   enableExperimentalScraping: booleanValue('ENABLE_EXPERIMENTAL_SCRAPING', true),
 
-  includeKeywords: stringList('INCLUDE_KEYWORDS', [
-    'teclado gamer',
-    'teclado mecanico',
-    'mouse gamer',
-    'mouse sem fio',
-    'mouse wireless',
-    'headset gamer',
-    'fone gamer',
-    'headset sem fio',
-    'fone sem fio',
-    'microfone gamer',
-    'microfone usb',
-    'webcam',
-    'webcam full hd',
-    'mousepad',
-    'mousepad gamer',
-    'desk mat',
-    'controle gamer',
-    'controle xbox',
-    'controle playstation',
-    'volante gamer',
-    'hub usb',
-    'usb hub',
-    'capture card',
-    'placa de captura',
-    'suporte para headset',
-    'base carregamento',
-    'carregador sem fio',
-    'braço articulado',
-    'stream deck',
-    'cadeira gamer',
-    'cadeira ergonômica',
-    'cadeira ergonomica',
-    'mesa gamer',
-    'ring light',
-    'microfone condensador',
-    'mouse bungee',
-    'paracord mouse',
-    'cabo usb c',
-    'cabo usb',
-    'teclado mecanico',
-    'kit teclado mouse'
-  ]),
+  includeKeywords: stringList('INCLUDE_KEYWORDS', DISCOVERY_TERMS),
+  excludeKeywords: stringList('EXCLUDE_KEYWORDS', EXCLUDE_KEYWORDS),
+  monitoredCategories: stringList('MONITORED_CATEGORIES', MONITORED_CATEGORIES),
+  monitoredStores: stringList('MONITORED_STORES', MONITORED_STORES),
 
-  excludeKeywords: stringList('EXCLUDE_KEYWORDS', [
-    'usado',
-    'recondicionado',
-    'refurbished',
-    'defeito',
-    'quebrado',
-    'capinha',
-    'pelicula',
-    'suporte celular',
-    'celular',
-    'smartphone',
-    'tablet',
-    'iphone',
-    'android'
-  ]),
-
-  monitoredCategories: stringList('MONITORED_CATEGORIES', [
-    'Gaming Keyboard',
-    'Gaming Mouse',
-    'Gaming Headset',
-    'Mousepad',
-    'Gaming Chair',
-    'Controller',
-    'Microphone',
-    'Webcam',
-    'USB Hub',
-    'Capture Card',
-    'Desk Mat',
-    'Gaming Accessory',
-    'Peripherals',
-    'PC Gamer Accessory',
-    'Streaming',
-    'Audio',
-    'Accessories'
-  ]),
-
-  monitoredStores: stringList('MONITORED_STORES', [
-    'Mercado Livre',
-    'Kalunga',
-    'Amazon',
-    'Kabum',
-    'TerabyteShop',
-    'Pichau',
-    'Magazine Luiza',
-    'AliExpress',
-    'Shopee'
-  ]),
-
-  version: '1.1.3'
+  version: '1.1.4'
 };
