@@ -125,6 +125,7 @@ export const config = {
 
   monitoredStores: stringList('MONITORED_STORES', [
     'Mercado Livre',
+    'Kalunga',
     'Amazon',
     'Kabum',
     'TerabyteShop',

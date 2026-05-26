@@ -9,6 +9,7 @@ import { truncate } from '../utils/text.js';
 
 const storeColors = {
   'Mercado Livre': 0xffe600,
+  Kalunga: 0x00a8e8,
   Amazon: 0xff9900,
   Kabum: 0xff6500,
   TerabyteShop: 0x00a0df,

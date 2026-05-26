@@ -1,6 +1,7 @@
 import { config } from '../config.js';
 
 import { fetchMercadoLivreDeals } from '../sources/mercadolivre.js';
+import { fetchKalungaDeals } from '../sources/kalunga.js';
 import { fetchAmazonDeals } from '../sources/amazon.js';
 import { fetchAliExpressDeals } from '../sources/aliexpress.js';
 import { fetchShopeeDeals } from '../sources/shopee.js';
@@ -30,6 +31,7 @@ async function safeFetch(name, fn) {
 export async function findDeals() {
   const fetchers = [
     ['Mercado Livre', fetchMercadoLivreDeals],
+    ['Kalunga', fetchKalungaDeals],
     ['Amazon', fetchAmazonDeals],
     ['AliExpress', fetchAliExpressDeals],
     ['Shopee', fetchShopeeDeals]

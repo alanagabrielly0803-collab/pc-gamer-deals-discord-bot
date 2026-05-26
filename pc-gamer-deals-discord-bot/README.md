@@ -9,6 +9,7 @@ Discord bot for monitoring gamer accessory deals and posting public permanent em
 | Store/source | Support level | Recommended method |
 |---|---:|---|
 | Mercado Livre | Reliable starter source | Public Mercado Livre search endpoint |
+| Kalunga | Reliable starter source | Public Kalunga search pages |
 | Amazon | Reliable only with credentials | Amazon Product Advertising API |
 | Kabum | Experimental | Avoid by default; optional low-rate JSON-LD scraping |
 | TerabyteShop | Experimental | Avoid by default; optional low-rate JSON-LD scraping |
@@ -45,6 +46,7 @@ The bot uses:
 ## Search improvements
 
 The discovery pass is focused on gamer accessories and peripherals: keyboards, mice, headsets, mousepads, microphones, webcams, controllers, USB hubs, capture cards, chairs and similar items.
+Kalunga is now included as an always-on source, so the bot has one more large retail catalog to search without needing experimental scraping.
 
 If you want even more results, enable:
 
