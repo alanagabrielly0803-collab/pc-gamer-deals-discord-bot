@@ -1,7 +1,7 @@
 {
   "name": "pc-gamer-deals-discord-bot",
   "version": "1.0.0",
-  "description": "Discord bot that monitors gamer accessory deals and posts them to a Discord channel.",
+  "description": "Discord bot that monitors informatics deals and posts them to a Discord channel.",
   "type": "module",
   "main": "index.js",
   "scripts": {

@@ -1,54 +1,55 @@
-# Gamer Accessory Deals Discord Bot
+# Bot de Ofertas de Informática
 
-Discord bot for monitoring gamer accessory deals and posting public permanent embeds to a Discord channel.
+Bot do Discord para monitorar ofertas de informática, hardware, periféricos e itens diretamente ligados a PC, notebook, rede e setup produtivo, publicando embeds permanentes em um canal do Discord.
 
-## Research report
+## Relatório de pesquisa
 
-### Recommended data sources
+### Fontes recomendadas
 
-| Store/source | Support level | Recommended method |
+| Loja/fonte | Nível de suporte | Método recomendado |
 |---|---:|---|
-| Mercado Livre | Reliable starter source | Public Mercado Livre search endpoint |
-| Kalunga | Reliable starter source | Public Kalunga search pages |
+| Mercado Livre | Fonte inicial confiável | Endpoint público de busca |
+| Kalunga | Fonte inicial confiável | Páginas públicas de busca |
+| Terabyte | Fonte forte de hardware | Páginas públicas de promoções/categorias |
 
-### Why these sources
+### Por que essas fontes
 
-Brazilian retail pages often change markup and use bot protection. To keep the bot reliable, the starter now uses only the stable sources that work without hidden credentials or brittle scraping.
+Páginas de varejo brasileiras mudam o HTML com frequência e costumam usar proteção contra bots. Para manter o bot confiável, a base inicial usa apenas fontes estáveis que funcionam sem credenciais ocultas ou scraping extremamente frágil.
 
-### Limitations
+### Limitações
 
-- Prices can change quickly.
-- JSON storage can be lost if `data/deals.json` is deleted.
-- Render Web Service + UptimeRobot is suitable for hobby use, but not guaranteed production uptime.
-- UptimeRobot can keep the Express endpoint warm, but it cannot guarantee Discord gateway stability.
-- Do not post products with unclear prices or fake/invented discounts.
+- Os preços mudam rapidamente.
+- O armazenamento JSON pode ser perdido se `data/deals.json` for apagado.
+- Render Web Service + UptimeRobot funciona bem para hobby, mas não garante disponibilidade de produção.
+- O UptimeRobot pode manter o endpoint Express aquecido, mas não garante estabilidade do gateway do Discord.
+- Não publique produtos com preço pouco claro ou descontos inventados.
 
-## Implementation plan
+## Plano de implementação
 
-The bot uses:
+O bot usa:
 
 - Node.js
 - discord.js
 - Express
 - Axios
-- Cheerio for catalog parsing
+- Cheerio para parsing de catálogo
 - node-cron
-- JSON storage
+- Armazenamento JSON
 
-## Search improvements
+## Melhorias de busca
 
-The discovery pass is focused on gamer accessories and practical upgrades: keyboards, mice, headsets, mousepads, microphones, webcams, controllers, USB hubs, capture cards, chairs, monitors, RAM, water coolers and similar items.
-Kalunga is now included as an always-on source, so the bot has one more large retail catalog to search without needing experimental scraping.
-The product taxonomy is centralized in `utils/dealTaxonomy.js`, which keeps keywords and categories grouped instead of scattered through the codebase.
+A busca agora é focada em informática e hardware diretamente ligados ao PC: SSDs, RAM, placas-mãe, processadores, GPUs, fontes, monitores, teclados, mouses, headsets, microfones, webcams, hubs USB, placas de captura, rede, impressoras, notebooks e itens similares.
+Kalunga e Terabyte estão incluídas como fontes sempre ativas, então o bot passa a consultar mais catálogos grandes sem precisar de credenciais.
+A taxonomia do produto fica centralizada em `utils/dealTaxonomy.js`, o que mantém palavras-chave e categorias organizadas em vez de espalhadas pelo código.
 
-The bot now posts products with an explicit percentage discount and can also surface the lowest price found among similar offers for comparison.
-If you want more results, lower `MIN_DISCOUNT_PERCENT`.
+O bot agora publica produtos com desconto percentual explícito e também pode mostrar o menor preço encontrado entre ofertas semelhantes para comparação.
+Se você quiser mais resultados, reduza `MIN_DISCOUNT_PERCENT`.
 
-## Setup
+## Configuração
 
-### Render environment variables
+### Variáveis de ambiente do Render
 
-Add:
+Adicione:
 
 ```env
 DISCORD_TOKEN=
@@ -62,7 +63,7 @@ MAX_PRICE=
 PORT=3000
 ```
 
-### Local development
+### Desenvolvimento local
 
 ```bash
 npm install
@@ -72,25 +73,25 @@ npm start
 
 ### UptimeRobot
 
-Monitor:
+Monitore:
 
 ```text
 https://your-render-url.onrender.com/health
 ```
 
-Use a 5-minute interval on the free plan.
+Use intervalo de 5 minutos no plano gratuito.
 
 ### GitHub
 
-Do not commit `.env` or `data/deals.json`.
+Não faça commit de `.env` nem de `data/deals.json`.
 
-Commit:
+Commitar:
 
 - `.env.example`
 - `data/.gitkeep`
-- all source files
+- todos os arquivos fonte
 
-## Slash commands
+## Comandos slash
 
 - `/deals`
 - `/forcecheck`
@@ -98,25 +99,25 @@ Commit:
 - `/status`
 - `/filters`
 
-## Testing checklist
+## Checklist de testes
 
-- Bot logs into Discord.
-- Slash commands register.
-- `/health` returns JSON.
-- `/forcecheck` runs without crashing.
-- Duplicate deals are not reposted.
-- Same product with lower price can post as a new deal.
-- `.env` is not committed.
-- Render environment variables are set.
-- UptimeRobot monitors `/health`.
+- O bot faz login no Discord.
+- Os comandos slash são registrados.
+- `/health` retorna JSON.
+- `/forcecheck` roda sem travar.
+- Ofertas duplicadas não são republicadas.
+- O mesmo produto com preço menor pode entrar como nova oferta.
+- `.env` não é commitado.
+- As variáveis do Render estão configuradas.
+- O UptimeRobot monitora `/health`.
 
-## Common errors
+## Erros comuns
 
-| Error | Cause | Fix |
+| Erro | Causa | Correção |
 |---|---|---|
-| Missing environment variable | Render variable missing | Add the missing environment variable |
-| Invalid token | Wrong bot token | Regenerate token in Discord Developer Portal |
-| Missing Access | Bot lacks channel permission | Grant Send Messages, Embed Links, Use Application Commands |
-| No deals posted | Filters too strict | Lower `MIN_DISCOUNT_PERCENT` or adjust keywords |
-| Scraping returns 0 | Store blocks or changed HTML | Keep scraping disabled or update selectors |
-| Duplicate posts after reset | `data/deals.json` was deleted | Restore backup or accept fresh history |
+| Variável de ambiente ausente | Variável faltando no Render | Adicione a variável ausente |
+| Token inválido | Token do bot errado | Gere um novo token no Discord Developer Portal |
+| Acesso ausente | Bot sem permissão no canal | Conceda Send Messages, Embed Links e Use Application Commands |
+| Nenhuma oferta publicada | Filtros rígidos demais | Reduza `MIN_DISCOUNT_PERCENT` ou ajuste as palavras-chave |
+| Scraping retorna 0 | Loja bloqueou ou mudou o HTML | Mantenha o scraping desligado ou atualize os seletores |
+| Posts duplicados após reset | `data/deals.json` foi apagado | Restaure o backup ou aceite um histórico novo |

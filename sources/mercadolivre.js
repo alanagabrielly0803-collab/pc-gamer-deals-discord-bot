@@ -9,65 +9,52 @@ const USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36';
 
 const BOOST_SEARCH_TERMS = [
-  'teclado mecanico',
-  'teclado gamer',
-  'kit teclado mouse',
-  'mouse sem fio',
-  'mouse gamer',
-  'headset sem fio',
-  'headset gamer',
-  'fone gamer',
-  'fone sem fio',
-  'mousepad gamer',
-  'mousepad',
-  'controle xbox',
-  'controle playstation',
-  'console gamer',
-  'playstation 5',
-  'ps5',
-  'xbox series x',
-  'xbox series s',
-  'nintendo switch',
-  'notebook gamer',
-  'notebook',
-  'laptop gamer',
-  'microfone usb',
-  'microfone gamer',
-  'webcam full hd',
-  'webcam',
-  'hub usb',
-  'usb hub',
-  'capture card',
-  'placa de captura',
-  'cadeira gamer',
-  'mesa gamer',
+  'ssd nvme',
+  'ssd sata',
+  'hd externo',
+  'hd interno',
+  'memoria ram',
+  'ddr4',
+  'ddr5',
+  'placa mae',
+  'processador',
+  'placa de video',
+  'placa video',
+  'monitor',
   'monitor gamer',
   'monitor 144hz',
   'monitor 165hz',
-  'monitor 240hz',
-  'placa de video',
-  'placa video',
-  'rtx',
-  'radeon',
-  'processador',
-  'ryzen',
-  'intel core',
-  'suporte para headset',
-  'braco articulado',
-  'braço articulado',
-  'stream deck',
-  'ring light',
-  'mouse bungee',
-  'paracord mouse',
-  'cabo usb c',
-  'cabo usb',
-  'carregador sem fio',
-  'base carregamento',
-  'volante gamer',
-  'gamer accessory',
-  'gaming accessory',
-  'perifericos gamer',
-  'periféricos gamer'
+  'teclado mecanico',
+  'teclado gamer',
+  'mouse sem fio',
+  'mouse gamer',
+  'mousepad gamer',
+  'mousepad',
+  'headset gamer',
+  'microfone usb',
+  'webcam full hd',
+  'hub usb',
+  'dock station',
+  'capture card',
+  'placa de captura',
+  'roteador',
+  'switch gigabit',
+  'repetidor wifi',
+  'mesh wifi',
+  'nobreak',
+  'filtro de linha',
+  'impressora',
+  'toner',
+  'cartucho',
+  'notebook',
+  'mini pc',
+  'caixa de som pc',
+  'fone usb',
+  'adaptador usb c',
+  'cabo hdmi',
+  'cabo displayport',
+  'cabo ethernet',
+  'usb c hub'
 ];
 
 const SORTS = ['relevance', 'price_asc'];
@@ -82,34 +69,33 @@ function cleanText(value) {
 function classifyCategory(title) {
   const value = String(title || '').toLowerCase();
 
-  if (value.includes('teclado')) return 'Gaming Keyboard';
-  if (value.includes('mousepad')) return 'Mousepad';
-  if (value.includes('mouse')) return 'Gaming Mouse';
-  if (value.includes('headset') || value.includes('fone')) return 'Gaming Headset';
+  if (value.includes('ssd')) return 'Armazenamento SSD';
+  if (value.includes('hd externo') || value.includes('hd interno')) return 'Armazenamento';
+  if (value.includes('memoria') || value.includes('ram')) return 'Memória RAM';
+  if (value.includes('placa mae') || value.includes('motherboard')) return 'Placa-mãe';
+  if (value.includes('processador') || value.includes('ryzen') || value.includes('intel')) return 'Processador';
+  if (value.includes('placa de video') || value.includes('rtx') || value.includes('radeon')) return 'Placa de vídeo';
+  if (value.includes('fonte')) return 'Fonte';
+  if (value.includes('cooler') || value.includes('water cooler')) return 'Cooler';
   if (value.includes('monitor')) return 'Monitor';
-  if (value.includes('console') || value.includes('playstation') || value.includes('xbox') || value.includes('switch')) {
-    return 'Console';
+  if (value.includes('teclado')) return 'Teclado gamer';
+  if (value.includes('mousepad')) return 'Mousepad';
+  if (value.includes('mouse')) return 'Mouse gamer';
+  if (value.includes('headset') || value.includes('fone')) return 'Headset gamer';
+  if (value.includes('microfone')) return 'Microfone';
+  if (value.includes('webcam')) return 'Webcam';
+  if (value.includes('hub usb') || value.includes('usb hub')) return 'Hub USB';
+  if (value.includes('dock')) return 'Dock';
+  if (value.includes('capture')) return 'Placa de captura';
+  if (value.includes('roteador') || value.includes('switch') || value.includes('mesh') || value.includes('wifi')) {
+    return 'Rede';
   }
-  if (value.includes('notebook') || value.includes('laptop')) return 'Gaming Notebook';
-  if (value.includes('ssd')) return 'SSD';
-  if (value.includes('memoria') || value.includes('memória') || value.includes('ram')) return 'RAM';
-  if (
-    value.includes('placa de video') ||
-    value.includes('placa de vídeo') ||
-    value.includes('rtx') ||
-    value.includes('radeon')
-  ) {
-    return 'Graphics Card';
-  }
-  if (value.includes('processador') || value.includes('ryzen') || value.includes('intel')) return 'Processor';
-  if (value.includes('placa mae') || value.includes('placa mãe') || value.includes('motherboard')) return 'Motherboard';
-  if (value.includes('fonte')) return 'Power Supply';
-  if (value.includes('cooler') || value.includes('water cooler')) return 'CPU Cooler';
-  if (value.includes('cadeira')) return 'Gaming Chair';
-  if (value.includes('controle')) return 'Controller';
-  if (value.includes('gabinete')) return 'PC Case';
+  if (value.includes('impressora') || value.includes('toner') || value.includes('cartucho')) return 'Impressora';
+  if (value.includes('notebook') || value.includes('laptop') || value.includes('mini pc')) return 'Notebook';
+  if (value.includes('caixa de som')) return 'Áudio';
+  if (value.includes('gabinete')) return 'Gabinete';
 
-  return 'PC Gamer Accessory';
+  return 'Hardware';
 }
 
 function buildMercadoLivreSearchSlug(keyword) {
@@ -212,9 +198,10 @@ async function fetchMercadoLivreHtmlDeals(keyword) {
   const deals = [];
 
   for (const offset of HTML_PAGES) {
-    const url = offset > 0
-      ? `https://lista.mercadolivre.com.br/${searchSlug}_Desde_${offset}`
-      : `https://lista.mercadolivre.com.br/${searchSlug}`;
+    const url =
+      offset > 0
+        ? `https://lista.mercadolivre.com.br/${searchSlug}_Desde_${offset}`
+        : `https://lista.mercadolivre.com.br/${searchSlug}`;
 
     const { data: html } = await axios.get(url, {
       timeout: 20000,
@@ -229,9 +216,7 @@ async function fetchMercadoLivreHtmlDeals(keyword) {
 
     cards.each((_, cardEl) => {
       const card = $(cardEl);
-      const linkEl = card
-        .find('a.ui-search-item__group__element, a.ui-search-link, a[href*="/MLB-"]')
-        .first();
+      const linkEl = card.find('a.ui-search-item__group__element, a.ui-search-link, a[href*="/MLB-"]').first();
 
       const productUrl = absoluteUrl('https://www.mercadolivre.com.br', linkEl.attr('href') || null);
       const title =
@@ -297,9 +282,7 @@ function mapMercadoLivreApiItem(item) {
     discountPercent: discount,
     couponCode: null,
     paymentDetails: item.accepts_mercadopago ? 'Mercado Pago' : null,
-    installmentPrice: item.installments
-      ? `${item.installments.quantity}x de R$ ${item.installments.amount}`
-      : null,
+    installmentPrice: item.installments ? `${item.installments.quantity}x de R$ ${item.installments.amount}` : null,
     stockStatus: item.available_quantity > 0 ? 'Available' : null,
     productUrl: item.permalink,
     dealEndsAt: null,

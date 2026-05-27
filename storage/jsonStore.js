@@ -64,7 +64,7 @@ export async function enrichWithPriceTracking(deals) {
     if (previous && isLowerPrice(deal.currentPrice, previous.currentPrice)) {
       return {
         ...deal,
-        priceDropText: `📉 Price dropped from ${previous.currentPriceText} to ${deal.currentPriceText}`
+        priceDropText: `📉 Preço caiu de ${previous.currentPriceText} para ${deal.currentPriceText}`
       };
     }
 
@@ -128,7 +128,7 @@ export async function hasPosted(deal) {
 }
 
 export async function markPosted(deal, messageId) {
-  if (!messageId) throw new Error('markPosted requires a Discord messageId.');
+  if (!messageId) throw new Error('markPosted requer um messageId do Discord.');
 
   const db = await readDb();
 

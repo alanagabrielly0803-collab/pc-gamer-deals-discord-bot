@@ -6,28 +6,26 @@ const USER_AGENT =
 const BASE_URL = 'https://www.kalunga.com.br';
 
 const SEARCHES = [
-  ['headset-gamer', 'Gaming Headset'],
-  ['mouse-gamer', 'Gaming Mouse'],
-  ['mousepad-gamer', 'Mousepad'],
+  ['ssd', 'SSD'],
+  ['memoria-ram', 'RAM'],
+  ['memoria-ram-ddr4', 'RAM'],
+  ['memoria-ram-ddr5', 'RAM'],
   ['teclado-gamer', 'Gaming Keyboard'],
+  ['mouse-gamer', 'Gaming Mouse'],
+  ['mousepad-gamer', 'Gaming Mouse'],
+  ['headset-gamer', 'Gaming Headset'],
   ['microfone-gamer', 'Microphone'],
   ['webcam', 'Webcam'],
   ['monitor-gamer', 'Monitor'],
-  ['memoria-ram', 'RAM'],
-  ['memoria-ram-ddr4', 'RAM'],
   ['water-cooler', 'CPU Cooler'],
-  ['controle-gamer', 'Controller'],
   ['hub-usb', 'USB Hub'],
-  ['suporte-headset', 'Gaming Accessory'],
-  ['kit-gamer', 'Gaming Accessory'],
-  ['cadeira-gamer', 'Gaming Chair'],
-  ['notebook-gamer', 'Gaming Notebook'],
-  ['console', 'Console'],
-  ['playstation-5', 'Console'],
-  ['xbox-series-x', 'Console'],
-  ['xbox-series-s', 'Console'],
+  ['notebook-gamer', 'Notebook'],
   ['placa-de-video', 'Graphics Card'],
-  ['processador', 'Processor']
+  ['processador', 'Processor'],
+  ['impressora', 'Printer'],
+  ['nobreak', 'Hardware'],
+  ['filtro-de-linha', 'Hardware'],
+  ['roteador', 'Networking']
 ];
 
 function uniqueBy(items, selector) {
@@ -64,30 +62,24 @@ function extractPriceText(card, title) {
 function classifyCategory(title) {
   const value = String(title || '').toLowerCase();
 
-  if (value.includes('teclado')) return 'Gaming Keyboard';
-  if (value.includes('mousepad')) return 'Mousepad';
-  if (value.includes('mouse')) return 'Gaming Mouse';
-  if (value.includes('headset') || value.includes('fone')) return 'Gaming Headset';
-  if (value.includes('microfone')) return 'Microphone';
-  if (value.includes('webcam')) return 'Webcam';
+  if (value.includes('ssd')) return 'Armazenamento SSD';
+  if (value.includes('memoria') || value.includes('ram')) return 'Memória RAM';
+  if (value.includes('placa de video') || value.includes('rtx') || value.includes('radeon')) return 'Placa de vídeo';
+  if (value.includes('processador') || value.includes('ryzen') || value.includes('intel')) return 'Processador';
   if (value.includes('monitor')) return 'Monitor';
-  if (value.includes('memoria') || value.includes('memória') || value.includes('ram')) return 'RAM';
-  if (value.includes('water cooler') || value.includes('watercooler') || value.includes('cooler liquido') || value.includes('cooler líquido')) {
-    return 'CPU Cooler';
-  }
-  if (value.includes('controle')) return 'Controller';
-  if (value.includes('hub usb') || value.includes('usb hub')) return 'USB Hub';
-  if (value.includes('suporte')) return 'Gaming Accessory';
-  if (value.includes('kit')) return 'Gaming Accessory';
-  if (value.includes('cadeira')) return 'Gaming Chair';
-  if (value.includes('console') || value.includes('playstation') || value.includes('xbox') || value.includes('switch')) return 'Console';
-  if (value.includes('notebook') || value.includes('laptop')) return 'Gaming Notebook';
-  if (value.includes('placa de video') || value.includes('placa de vídeo') || value.includes('rtx') || value.includes('radeon')) {
-    return 'Graphics Card';
-  }
-  if (value.includes('processador') || value.includes('ryzen') || value.includes('intel')) return 'Processor';
+  if (value.includes('teclado')) return 'Teclado gamer';
+  if (value.includes('mousepad')) return 'Mouse gamer';
+  if (value.includes('mouse')) return 'Mouse gamer';
+  if (value.includes('headset') || value.includes('fone')) return 'Headset gamer';
+  if (value.includes('microfone')) return 'Microfone';
+  if (value.includes('webcam')) return 'Webcam';
+  if (value.includes('water cooler') || value.includes('watercooler') || value.includes('cooler')) return 'Cooler';
+  if (value.includes('hub usb') || value.includes('usb hub')) return 'Hub USB';
+  if (value.includes('notebook') || value.includes('laptop')) return 'Notebook';
+  if (value.includes('impressora') || value.includes('toner') || value.includes('cartucho')) return 'Impressora';
+  if (value.includes('roteador') || value.includes('switch') || value.includes('wifi')) return 'Rede';
 
-  return 'PC Gamer Accessory';
+  return 'Hardware';
 }
 
 async function fetchKalungaSearch(term, page) {
@@ -167,12 +159,7 @@ export async function fetchKalungaDeals() {
     for (const page of [1, 2]) {
       try {
         const pageDeals = await fetchKalungaSearch(term, page);
-        deals.push(
-          ...pageDeals.map((deal) => ({
-            ...deal,
-            category: deal.category === 'PC Gamer Accessory' ? category : deal.category
-          }))
-        );
+        deals.push(...pageDeals);
       } catch {
         // Ignore page-level errors and keep collecting from the remaining searches.
       }

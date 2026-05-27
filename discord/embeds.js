@@ -12,7 +12,7 @@ const storeColors = {
   Kalunga: 0x00a8e8,
   Amazon: 0xff9900,
   Kabum: 0xff6500,
-  TerabyteShop: 0x00a0df,
+  Terabyte: 0x00a0df,
   Pichau: 0xe30613,
   'Magazine Luiza': 0x0086ff,
   AliExpress: 0xe62e04,
@@ -29,51 +29,92 @@ function addField(fields, name, value, inline = true) {
   });
 }
 
+function translateConfidence(value) {
+  const map = {
+    high: 'alta',
+    medium: 'média',
+    low: 'baixa'
+  };
+
+  return map[String(value || '').toLowerCase()] || String(value || '');
+}
+
+function translateReason(value) {
+  const map = {
+    missing_deal: 'oferta ausente',
+    missing_product_name: 'nome do produto ausente',
+    missing_product_url: 'link do produto ausente',
+    missing_store_name: 'nome da loja ausente',
+    forbidden_title_pattern: 'título bloqueado',
+    forbidden_url_pattern: 'URL bloqueada',
+    not_product_page: 'página não parece ser de produto',
+    invalid_current_price: 'preço atual inválido',
+    price_above_max: 'preço acima do máximo configurado',
+    blocked_keyword: 'termo bloqueado',
+    no_relevant_signal: 'sem sinal relevante',
+    discount_below_threshold: 'desconto abaixo do mínimo',
+    out_of_stock: 'sem estoque',
+    matched_strong_category_and_signal: 'categoria forte e sinal relevante',
+    matched_contextual_keyword_with_context: 'termo contextual com contexto',
+    matched_category_signal: 'sinal de categoria'
+  };
+
+  return map[String(value || '').toLowerCase()] || String(value || '');
+}
+
 export function buildDealMessage(deal) {
   const fields = [];
 
-  addField(fields, 'Store', deal.storeName);
-  addField(fields, 'Category', deal.category);
-  addField(fields, 'Current price', deal.currentPriceText);
-  addField(fields, 'Original price', deal.originalPriceText);
-  addField(fields, 'Discount', deal.discountPercent !== null ? `${deal.discountPercent}% OFF` : null);
-  addField(fields, 'Coupon', deal.couponCode);
-  addField(fields, 'Payment', deal.paymentDetails);
-  addField(fields, 'Installments', deal.installmentPrice);
-  addField(fields, 'Stock', deal.stockStatus);
-  addField(fields, 'Shipping', deal.shippingInfo);
+  addField(fields, 'Loja', deal.storeName);
+  addField(fields, 'Categoria', deal.category);
+  addField(fields, 'Preço atual', deal.currentPriceText);
+  addField(fields, 'Preço original', deal.originalPriceText);
+  addField(fields, 'Desconto', deal.discountPercent !== null ? `${deal.discountPercent}% OFF` : null);
+  addField(fields, 'Cupom', deal.couponCode);
+  addField(fields, 'Pagamento', deal.paymentDetails);
+  addField(fields, 'Parcelamento', deal.installmentPrice);
+  addField(fields, 'Estoque', deal.stockStatus);
+  addField(fields, 'Frete', deal.shippingInfo);
   addField(
     fields,
-    'Rating',
-    deal.rating ? `${deal.rating}${deal.reviewCount ? ` (${deal.reviewCount} reviews)` : ''}` : null
+    'Avaliação',
+    deal.rating ? `${deal.rating}${deal.reviewCount ? ` (${deal.reviewCount} avaliações)` : ''}` : null
   );
-  addField(fields, 'Deal ends', deal.dealEndsAt ? new Date(deal.dealEndsAt).toUTCString() : null);
-  addField(fields, 'Time remaining', deal.timeRemaining);
-  addField(fields, 'Brand / Model', [deal.brand, deal.model].filter(Boolean).join(' / '));
-  addField(fields, 'Specs', deal.specs, false);
-  addField(fields, 'Found at', new Date(deal.foundAt).toLocaleString('pt-BR'), false);
+  addField(fields, 'Fim da oferta', deal.dealEndsAt ? new Date(deal.dealEndsAt).toUTCString() : null);
+  addField(fields, 'Tempo restante', deal.timeRemaining);
+  addField(
+    fields,
+    'Confiança',
+    deal.validationConfidence
+      ? `${translateConfidence(deal.validationConfidence)} (${translateReason(deal.validationReason || 'não disponível')})`
+      : null
+  );
+  addField(fields, 'Marca / Modelo', [deal.brand, deal.model].filter(Boolean).join(' / '));
+  addField(fields, 'Especificações', deal.specs, false);
+  addField(fields, 'Encontrado em', new Date(deal.foundAt).toLocaleString('pt-BR'), false);
 
   const title = deal.priceDropText
-    ? `Price drop: ${deal.productName}`
+    ? `Queda de preço: ${deal.productName}`
     : deal.isBestPriceComparison
-      ? `Lowest price found: ${deal.productName}`
+      ? `Menor preço encontrado: ${deal.productName}`
       : deal.isFlashSale
-        ? `Flash deal: ${deal.productName}`
-        : `Gamer accessory deal: ${deal.productName}`;
+        ? `Oferta relâmpago: ${deal.productName}`
+        : `Oferta de informática: ${deal.productName}`;
 
   const descriptionParts = [
     deal.priceDropText,
     deal.comparisonText,
     deal.description,
-    deal.discountPercent !== null ? `Discount detected: ${deal.discountPercent}% OFF.` : null
+    deal.validationConfidence ? `Confiança da validação: ${translateConfidence(deal.validationConfidence)}.` : null,
+    deal.discountPercent !== null ? `Desconto detectado: ${deal.discountPercent}% OFF.` : null
   ].filter(Boolean);
 
   const embed = new EmbedBuilder()
     .setTitle(truncate(title, 256))
     .setURL(deal.productUrl)
     .setColor(storeColors[deal.storeName] || 0x5865f2)
-    .setDescription(truncate(descriptionParts.join('\n'), 900) || 'A gamer accessory deal was found.')
-    .setFooter({ text: `Source: ${deal.source || deal.storeName}` })
+    .setDescription(truncate(descriptionParts.join('\n'), 900) || 'Uma oferta de informática foi encontrada.')
+    .setFooter({ text: `Fonte: ${deal.source || deal.storeName}` })
     .setTimestamp(new Date());
 
   if (deal.imageUrl) {
@@ -86,7 +127,7 @@ export function buildDealMessage(deal) {
 
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
-      .setLabel('View Deal')
+      .setLabel('Ver oferta')
       .setStyle(ButtonStyle.Link)
       .setURL(deal.productUrl)
   );

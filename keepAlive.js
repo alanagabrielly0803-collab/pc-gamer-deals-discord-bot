@@ -6,7 +6,7 @@ export function startKeepAliveServer(client) {
   const app = express();
 
   app.get('/', (_req, res) => {
-    res.type('text/plain').send('Gamer Accessory Deals Discord Bot is running.');
+    res.type('text/plain').send('O bot de ofertas de informática está em execução.');
   });
 
   app.get('/health', (_req, res) => {

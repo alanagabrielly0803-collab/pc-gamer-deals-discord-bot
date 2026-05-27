@@ -41,8 +41,8 @@ export function annotateBestPriceDeals(deals) {
     if (!bestPrice) continue;
 
     const bestPriceValue = bestPrice.price;
-    const groupLabel = group.length === 1 ? 'offer' : 'similar offers';
-    const bestPriceText = `Lowest price found among ${group.length} ${groupLabel}: ${formatBRL(bestPriceValue)}`;
+    const groupLabel = group.length === 1 ? 'oferta' : 'ofertas semelhantes';
+    const bestPriceText = `Menor preço encontrado entre ${group.length} ${groupLabel}: ${formatBRL(bestPriceValue)}`;
 
     for (const deal of group) {
       deal.comparisonKey = key;

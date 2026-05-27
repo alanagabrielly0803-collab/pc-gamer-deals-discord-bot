@@ -8,7 +8,7 @@ import { postNewDeals, purgeBotPosts } from './discord/poster.js';
 let isChecking = false;
 
 async function executeCheck({ post = true } = {}) {
-  console.log('[scheduler] Checking for gamer accessory deals...');
+  console.log('[scheduler] Verificando ofertas de informática...');
 
   const deals = await findDeals();
   const posted = post ? await postNewDeals(deals, config.maxPostsPerCheck) : 0;
@@ -20,14 +20,14 @@ async function executeCheck({ post = true } = {}) {
   state.totalDealsPosted += posted;
   state.lastError = null;
 
-  console.log(`[scheduler] Check complete. Found=${deals.length}, Posted=${posted}`);
+  console.log(`[scheduler] Verificação concluída. Encontradas=${deals.length}, Publicadas=${posted}`);
 
   return { found: deals.length, posted };
 }
 
 async function withCheckLock(task) {
   if (isChecking) {
-    console.log('[scheduler] Check skipped because another check is already running.');
+    console.log('[scheduler] Verificação ignorada porque já existe outra execução em andamento.');
     return { found: 0, posted: 0, skipped: true };
   }
 
@@ -50,7 +50,7 @@ export async function runCheck({ post = true } = {}) {
 
 export async function refreshDeals() {
   return withCheckLock(async () => {
-    console.log('[scheduler] Refreshing deals: cleaning old bot posts and reposting current offers...');
+    console.log('[scheduler] Atualizando ofertas: limpando posts antigos do bot e republicando as ofertas atuais...');
 
     const deleted = await purgeBotPosts();
     const result = await executeCheck({ post: true });
@@ -70,5 +70,5 @@ export function startScheduler() {
     runCheck({ post: true });
   });
 
-  console.log(`[scheduler] Scheduled checks every ${minutes} minute(s).`);
+  console.log(`[scheduler] Verificações agendadas a cada ${minutes} minuto(s).`);
 }

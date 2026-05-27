@@ -36,6 +36,15 @@ export function truncate(value, maxLength) {
 }
 
 export function containsAny(text, keywords = []) {
-  const lower = String(text || '').toLowerCase();
-  return keywords.some((keyword) => lower.includes(String(keyword).toLowerCase()));
+  const normalizedText = normalizeForSearch(text);
+  return keywords.some((keyword) => normalizedText.includes(normalizeForSearch(keyword)));
+}
+
+export function normalizeForSearch(value) {
+  return String(value || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
 }

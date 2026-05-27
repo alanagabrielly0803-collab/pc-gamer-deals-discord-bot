@@ -14,30 +14,30 @@ if (!token || !clientId || !guildId) {
 const commands = [
   new SlashCommandBuilder()
     .setName('deals')
-    .setDescription('Show recent gamer accessory deals.')
+    .setDescription('Mostra ofertas recentes de informática.')
     .addIntegerOption((option) =>
       option
         .setName('limit')
-        .setDescription('Number of deals to show, maximum 10.')
+        .setDescription('Número de ofertas para mostrar, máximo 10.')
         .setMinValue(1)
         .setMaxValue(10)
     ),
 
   new SlashCommandBuilder()
     .setName('forcecheck')
-    .setDescription('Manually search and publicly post new deals.'),
+    .setDescription('Busca manualmente e publica novas ofertas.'),
 
   new SlashCommandBuilder()
     .setName('refreshdeals')
-    .setDescription('Delete old bot posts in the deals channel and repost the latest deals.'),
+    .setDescription('Apaga posts antigos do bot no canal e republica as ofertas atuais.'),
 
   new SlashCommandBuilder()
     .setName('status')
-    .setDescription('Show bot status.'),
+    .setDescription('Mostra o status do bot.'),
 
   new SlashCommandBuilder()
     .setName('filters')
-    .setDescription('Show current deal filters.')
+    .setDescription('Mostra os filtros atuais de ofertas.')
 ].map((command) => command.toJSON());
 
 export async function registerCommands() {

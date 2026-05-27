@@ -1,8 +1,9 @@
 import { fetchMercadoLivreDeals } from '../sources/mercadolivre.js';
 import { fetchKalungaDeals } from '../sources/kalunga.js';
+import { fetchTerabyteDeals } from '../sources/terabyte.js';
 
 import { normalizeDeal } from './normalizeDeal.js';
-import { isValidDeal } from './validateDeal.js';
+import { evaluateDeal, isValidDeal } from './validateDeal.js';
 import { dedupeDeals } from '../utils/dedupe.js';
 import { annotateBestPriceDeals } from '../utils/priceComparison.js';
 
@@ -36,6 +37,12 @@ function getDealPrice(deal) {
 }
 
 function compareFeaturedDeals(a, b) {
+  const confidenceOrder = { high: 3, medium: 2, low: 1 };
+  const confidenceA = confidenceOrder[a?.validationConfidence] || 0;
+  const confidenceB = confidenceOrder[b?.validationConfidence] || 0;
+
+  if (confidenceA !== confidenceB) return confidenceB - confidenceA;
+
   const discountA = Number.isFinite(Number(a?.discountPercent)) ? Number(a.discountPercent) : -1;
   const discountB = Number.isFinite(Number(b?.discountPercent)) ? Number(b.discountPercent) : -1;
 
@@ -67,7 +74,7 @@ function selectFeaturedDeals(deals, limit) {
 
   for (const group of byCategory.values()) {
     const discounted = group.filter((deal) => isValidDeal(deal));
-    const comparison = group.filter((deal) => deal.isBestPriceComparison);
+    const comparison = group.filter((deal) => isValidDeal(deal) && deal.isBestPriceComparison);
 
     let winner = null;
 
@@ -94,7 +101,8 @@ function selectFeaturedDeals(deals, limit) {
 export async function findDeals() {
   const fetchers = [
     ['Mercado Livre', fetchMercadoLivreDeals],
-    ['Kalunga', fetchKalungaDeals]
+    ['Kalunga', fetchKalungaDeals],
+    ['Terabyte', fetchTerabyteDeals]
   ];
 
   const raw = [];
@@ -105,11 +113,22 @@ export async function findDeals() {
 
   const normalized = raw.map(normalizeDeal);
   const withTracking = await enrichWithPriceTracking(normalized);
-  const candidates = withTracking.filter((deal) => isValidDeal(deal, { allowWithoutDiscount: true }));
+  const candidates = withTracking
+    .map((deal) => {
+      const assessment = evaluateDeal(deal, { allowWithoutDiscount: true });
+      return assessment.accepted
+        ? {
+            ...deal,
+            validationConfidence: assessment.confidence,
+            validationReason: assessment.reason
+          }
+        : null;
+    })
+    .filter(Boolean);
   const unique = dedupeDeals(candidates);
   const compared = annotateBestPriceDeals(unique);
   const valid = selectFeaturedDeals(
-    compared.filter((deal) => isValidDeal(deal, { allowWithoutDiscount: true }) || deal.isBestPriceComparison),
+    compared.filter((deal) => evaluateDeal(deal).accepted),
     20
   );
 

@@ -50,7 +50,7 @@ export const config = {
   includeKeywords: stringList('INCLUDE_KEYWORDS', DISCOVERY_TERMS),
   excludeKeywords: stringList('EXCLUDE_KEYWORDS', EXCLUDE_KEYWORDS),
   monitoredCategories: stringList('MONITORED_CATEGORIES', MONITORED_CATEGORIES),
-  monitoredStores: stringList('MONITORED_STORES', ['Mercado Livre', 'Kalunga']),
+  monitoredStores: stringList('MONITORED_STORES', ['Mercado Livre', 'Kalunga', 'Terabyte']),
 
-  version: '1.1.8'
+  version: '1.2.0'
 };

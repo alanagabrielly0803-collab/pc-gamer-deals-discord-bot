@@ -5,32 +5,54 @@ import { buildDealMessage } from '../discord/embeds.js';
 import { refreshDeals, runCheck } from '../scheduler.js';
 import { MessageFlags, PermissionsBitField } from 'discord.js';
 
+const inFlightInteractions = new Set();
+
+async function withInteractionLock(interaction, handler) {
+  if (!interaction?.id) {
+    return;
+  }
+
+  if (inFlightInteractions.has(interaction.id)) {
+    return;
+  }
+
+  inFlightInteractions.add(interaction.id);
+
+  try {
+    await handler();
+  } finally {
+    inFlightInteractions.delete(interaction.id);
+  }
+}
+
 export async function handleInteraction(interaction) {
   if (!interaction.isChatInputCommand()) return;
 
-  if (interaction.commandName === 'deals') {
-    await handleDeals(interaction);
-    return;
-  }
+  await withInteractionLock(interaction, async () => {
+    if (interaction.commandName === 'deals') {
+      await handleDeals(interaction);
+      return;
+    }
 
-  if (interaction.commandName === 'forcecheck') {
-    await handleForceCheck(interaction);
-    return;
-  }
+    if (interaction.commandName === 'forcecheck') {
+      await handleForceCheck(interaction);
+      return;
+    }
 
-  if (interaction.commandName === 'refreshdeals') {
-    await handleRefreshDeals(interaction);
-    return;
-  }
+    if (interaction.commandName === 'refreshdeals') {
+      await handleRefreshDeals(interaction);
+      return;
+    }
 
-  if (interaction.commandName === 'status') {
-    await handleStatus(interaction);
-    return;
-  }
+    if (interaction.commandName === 'status') {
+      await handleStatus(interaction);
+      return;
+    }
 
-  if (interaction.commandName === 'filters') {
-    await handleFilters(interaction);
-  }
+    if (interaction.commandName === 'filters') {
+      await handleFilters(interaction);
+    }
+  });
 }
 
 async function handleDeals(interaction) {
@@ -39,13 +61,13 @@ async function handleDeals(interaction) {
 
   if (!deals.length) {
     await interaction.reply({
-      content: 'No deals stored yet. Use /forcecheck first.'
+      content: 'Ainda não há ofertas salvas. Use /forcecheck primeiro.'
     });
     return;
   }
 
   await interaction.reply({
-    content: `Showing ${deals.length} recent gamer accessory deal(s):`
+    content: `Mostrando ${deals.length} oferta(s) recente(s) de informática:`
   });
 
   for (const deal of deals) {
@@ -60,15 +82,22 @@ async function handleForceCheck(interaction) {
     return;
   }
 
-  await interaction.deferReply();
+  try {
+    await interaction.deferReply();
+  } catch (error) {
+    if (String(error?.message || '').includes('already been acknowledged')) {
+      return;
+    }
+    throw error;
+  }
 
   const result = await runCheck({ post: true });
 
-  await interaction.editReply({
-    content: result.skipped
-      ? 'Manual check skipped because another check was already running.'
-      : `Manual check finished. Found: ${result.found}. Posted: ${result.posted}.`
-  });
+    await interaction.editReply({
+      content: result.skipped
+        ? 'A verificação manual foi ignorada porque já havia outra execução em andamento.'
+        : `Verificação manual concluída. Encontradas: ${result.found}. Publicadas: ${result.posted}.`
+    });
 }
 
 async function handleRefreshDeals(interaction) {
@@ -79,22 +108,29 @@ async function handleRefreshDeals(interaction) {
 
   if (!canModerate) {
     await interaction.reply({
-      content: 'You need Manage Messages or Administrator permission to run this command.',
+      content: 'Você precisa de permissão de Gerenciar Mensagens ou Administrador para usar este comando.',
       flags: MessageFlags.Ephemeral
     });
     return;
   }
 
-  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+  try {
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+  } catch (error) {
+    if (String(error?.message || '').includes('already been acknowledged')) {
+      return;
+    }
+    throw error;
+  }
 
   const result = await refreshDeals();
 
   await interaction.editReply({
     content: [
-      `Cleanup finished. Deleted ${result.deleted || 0} old bot message(s).`,
+      `Limpeza concluída. ${result.deleted || 0} mensagem(ns) antiga(s) do bot excluída(s).`,
       result.skipped
-        ? 'The repost was skipped because another check was already running.'
-        : `Repost finished. Found: ${result.found}. Posted: ${result.posted}.`
+        ? 'A republicação foi ignorada porque já havia outra verificação em andamento.'
+        : `Republicação concluída. Encontradas: ${result.found}. Publicadas: ${result.posted}.`
     ].join(' ')
   });
 }
@@ -104,22 +140,22 @@ async function handleStatus(interaction) {
 
   await interaction.reply({
     content: [
-      '**Gamer Accessory Deals Bot Status**',
-      `Uptime: ${getUptimeSeconds()} seconds`,
-      `Last check: ${state.lastCheck || 'Never'}`,
-      `Last error: ${state.lastError || 'None'}`,
-      `Last run found: ${state.lastRunFound}`,
-      `Last run posted: ${state.lastRunPosted}`,
-      `Total deals found: ${state.totalDealsFound}`,
-      `Total deals posted: ${state.totalDealsPosted}`,
-      `Stored deals: ${stats.storedDeals}`,
-      `Posted deals: ${stats.postedDeals}`,
-      `Tracked products: ${stats.trackedProducts}`,
-      `Monitored stores: ${config.monitoredStores.join(', ')}`,
-      `Monitored categories: ${config.monitoredCategories.join(', ')}`,
-      `Discord status: ${state.discordStatus}`,
-      `Keep-alive server: running`,
-      `Version: ${state.version}`
+      '**Status do Bot de Ofertas de Informática**',
+      `Tempo de atividade: ${getUptimeSeconds()} segundos`,
+      `Última verificação: ${state.lastCheck || 'Nunca'}`,
+      `Último erro: ${state.lastError || 'Nenhum'}`,
+      `Última execução encontrou: ${state.lastRunFound}`,
+      `Última execução publicou: ${state.lastRunPosted}`,
+      `Total de ofertas encontradas: ${state.totalDealsFound}`,
+      `Total de ofertas publicadas: ${state.totalDealsPosted}`,
+      `Ofertas armazenadas: ${stats.storedDeals}`,
+      `Ofertas publicadas: ${stats.postedDeals}`,
+      `Produtos acompanhados: ${stats.trackedProducts}`,
+      `Lojas monitoradas: ${config.monitoredStores.join(', ')}`,
+      `Categorias monitoradas: ${config.monitoredCategories.join(', ')}`,
+      `Status do Discord: ${state.discordStatus}`,
+      `Servidor de keep-alive: em execução`,
+      `Versão: ${state.version}`
     ].join('\n')
   });
 }
@@ -127,15 +163,15 @@ async function handleStatus(interaction) {
 async function handleFilters(interaction) {
   await interaction.reply({
     content: [
-      '**Current Filters**',
-      `Check interval: ${config.checkIntervalMinutes} minutes`,
-      `Max posts per check: ${config.maxPostsPerCheck}`,
-      `Minimum percentage discount: ${config.minDiscountPercent}%`,
-      `Maximum price: ${config.maxPrice === null ? 'Not set' : `R$ ${config.maxPrice}`}`,
-      `Stores: ${config.monitoredStores.join(', ')}`,
-      `Categories: ${config.monitoredCategories.join(', ')}`,
-      `Include keywords: ${config.includeKeywords.join(', ')}`,
-      `Exclude keywords: ${config.excludeKeywords.join(', ')}`
+      '**Filtros Atuais**',
+      `Intervalo de verificação: ${config.checkIntervalMinutes} minutos`,
+      `Máximo de posts por verificação: ${config.maxPostsPerCheck}`,
+      `Desconto mínimo: ${config.minDiscountPercent}%`,
+      `Preço máximo: ${config.maxPrice === null ? 'Não definido' : `R$ ${config.maxPrice}`}`,
+      `Lojas: ${config.monitoredStores.join(', ')}`,
+      `Categorias: ${config.monitoredCategories.join(', ')}`,
+      `Palavras-chave incluídas: ${config.includeKeywords.join(', ')}`,
+      `Palavras-chave excluídas: ${config.excludeKeywords.join(', ')}`
     ].join('\n')
   });
 }
