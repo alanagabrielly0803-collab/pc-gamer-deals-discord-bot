@@ -24,6 +24,10 @@ export function normalizeDeal(raw) {
   const current = parsePrice(raw.currentPrice);
   const original = parsePrice(raw.originalPrice);
   const computedDiscount = raw.discountPercent ?? discountPercent(original, current);
+  const normalizedDiscount =
+    computedDiscount === null || computedDiscount === undefined || computedDiscount === ''
+      ? null
+      : Number(computedDiscount);
 
   const deal = {
     externalId: cleanText(raw.externalId, 180),
@@ -38,7 +42,7 @@ export function normalizeDeal(raw) {
     originalPrice: original,
     originalPriceText: original !== null ? formatBRL(original) : cleanText(raw.originalPrice, 80),
 
-    discountPercent: Number.isFinite(Number(computedDiscount)) ? Number(computedDiscount) : null,
+    discountPercent: Number.isFinite(Number(normalizedDiscount)) ? normalizedDiscount : null,
 
     couponCode: cleanText(raw.couponCode, 80),
     paymentDetails: cleanText(raw.paymentDetails, 180),

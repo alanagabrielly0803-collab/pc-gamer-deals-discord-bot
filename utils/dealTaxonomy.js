@@ -93,8 +93,6 @@ export const BLOCKED_KEYWORDS = [
   'xbox',
   'nintendo',
   'switch oled',
-  'cadeira gamer',
-  'mesa gamer',
   'poltrona',
   'sofa',
   'celular',
@@ -175,7 +173,8 @@ export const STRONG_CATEGORIES = [
   'Dock',
   'Periféricos',
   'Peripherals',
-  'Hardware'
+  'Hardware',
+  'Espaço Gamer'
 ];
 
 export const CONTEXTUAL_CATEGORIES = [

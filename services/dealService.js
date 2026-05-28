@@ -1,4 +1,5 @@
 import { fetchMercadoLivreDeals } from '../sources/mercadolivre.js';
+import { fetchKabumDeals } from '../sources/kabum.js';
 import { fetchKalungaDeals } from '../sources/kalunga.js';
 import { fetchTerabyteDeals } from '../sources/terabyte.js';
 
@@ -159,6 +160,7 @@ async function filterLiveDeals(deals) {
 export async function findDeals() {
   const fetchers = [
     ['Mercado Livre', fetchMercadoLivreDeals],
+    ['Kabum', fetchKabumDeals],
     ['Kalunga', fetchKalungaDeals],
     ['Terabyte', fetchTerabyteDeals]
   ];
