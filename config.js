@@ -8,6 +8,15 @@ import {
 
 dotenv.config();
 
+function envFlag(name) {
+  const raw = process.env[name];
+  if (!raw) return false;
+  return ['true', '1', 'yes', 'y', 'on'].includes(raw.toLowerCase());
+}
+
+const mode = String(process.env.BOT_MODE || '').trim().toLowerCase() || 'discord';
+const testMode = mode === 'test' || envFlag('DISCORD_DISABLED');
+
 function required(name) {
   const value = process.env[name];
   if (!value || value.trim() === '') {
@@ -36,10 +45,12 @@ function booleanValue(name, fallback = false) {
 }
 
 export const config = {
-  discordToken: required('DISCORD_TOKEN'),
-  clientId: required('CLIENT_ID'),
-  guildId: required('GUILD_ID'),
-  channelId: required('CHANNEL_ID'),
+  mode,
+  discordEnabled: !testMode,
+  discordToken: testMode ? null : required('DISCORD_TOKEN'),
+  clientId: testMode ? null : required('CLIENT_ID'),
+  guildId: testMode ? null : required('GUILD_ID'),
+  channelId: testMode ? null : required('CHANNEL_ID'),
 
   port: numberValue('PORT', 3000),
   checkIntervalMinutes: Math.max(5, numberValue('CHECK_INTERVAL_MINUTES', 30)),

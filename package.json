@@ -6,6 +6,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
+    "test:start": "node test-service.js",
     "register": "node commands/registerCommands.js"
   },
   "engines": {

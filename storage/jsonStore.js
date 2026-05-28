@@ -2,6 +2,7 @@ import fs from 'fs/promises';
 import path from 'path';
 
 import { areSameDeal, areSameProduct } from '../utils/dedupe.js';
+import { canonicalUrl } from '../utils/url.js';
 import { isLowerPrice } from '../utils/price.js';
 
 const DATA_DIR = path.resolve('data');
@@ -11,6 +12,7 @@ const initialData = {
   posted: {},
   recentDeals: [],
   productPrices: {},
+  urlHealth: {},
   priceHistory: [],
   meta: {
     lastCheck: null
@@ -38,6 +40,7 @@ export async function readDb() {
       posted: parsed.posted || {},
       recentDeals: Array.isArray(parsed.recentDeals) ? parsed.recentDeals : [],
       productPrices: parsed.productPrices || {},
+      urlHealth: parsed.urlHealth || {},
       priceHistory: Array.isArray(parsed.priceHistory) ? parsed.priceHistory : [],
       meta: parsed.meta || { lastCheck: null }
     };
@@ -112,6 +115,42 @@ export async function saveSeenDeals(deals) {
   db.recentDeals = db.recentDeals.slice(0, 500);
   db.priceHistory = db.priceHistory.slice(0, 1000);
 
+  await writeDb(db);
+}
+
+export async function rememberUrlHealth(entries) {
+  if (!Array.isArray(entries) || entries.length === 0) {
+    return;
+  }
+
+  const db = await readDb();
+  const current = db.urlHealth || {};
+  let changed = false;
+
+  for (const entry of entries) {
+    if (!entry?.canonicalUrl && !entry?.finalUrl) continue;
+
+    const key = canonicalUrl(entry.canonicalUrl || entry.finalUrl);
+    if (!key) continue;
+
+    const next = {
+      ...current[key],
+      ...entry,
+      canonicalUrl: key
+    };
+
+    const serializedNext = JSON.stringify(next);
+    const serializedCurrent = JSON.stringify(current[key] || null);
+
+    if (serializedNext !== serializedCurrent) {
+      current[key] = next;
+      changed = true;
+    }
+  }
+
+  if (!changed) return;
+
+  db.urlHealth = current;
   await writeDb(db);
 }
 

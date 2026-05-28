@@ -6,8 +6,9 @@ import { normalizeDeal } from './normalizeDeal.js';
 import { evaluateDeal, isValidDeal } from './validateDeal.js';
 import { dedupeDeals } from '../utils/dedupe.js';
 import { annotateBestPriceDeals } from '../utils/priceComparison.js';
+import { verifyProductPage } from '../utils/pageHealth.js';
 
-import { enrichWithPriceTracking, saveSeenDeals } from '../storage/jsonStore.js';
+import { enrichWithPriceTracking, rememberUrlHealth, saveSeenDeals, readDb } from '../storage/jsonStore.js';
 import { logger } from '../utils/logger.js';
 import { parsePrice } from '../utils/price.js';
 
@@ -98,6 +99,63 @@ function selectFeaturedDeals(deals, limit) {
   return featured.slice(0, Math.max(1, limit));
 }
 
+function getUrlHealthKey(deal) {
+  return String(deal?.canonicalUrl || deal?.productUrl || '').trim() || null;
+}
+
+function isFreshEntry(entry, maxAgeMs) {
+  if (!entry || !entry.state || !entry.checkedAt) return false;
+
+  const checkedAt = new Date(entry.checkedAt).getTime();
+  if (Number.isNaN(checkedAt)) return false;
+
+  return Date.now() - checkedAt <= maxAgeMs;
+}
+
+async function filterLiveDeals(deals) {
+  const db = await readDb();
+  const cachedHealth = db.urlHealth || {};
+  const deadFreshnessMs = 7 * 24 * 60 * 60 * 1000;
+  const liveDeals = [];
+  const healthEntries = [];
+
+  for (const deal of deals) {
+    const healthKey = getUrlHealthKey(deal);
+    const cached = healthKey ? cachedHealth[healthKey] : null;
+
+    if (cached?.state === 'dead' && isFreshEntry(cached, deadFreshnessMs)) {
+      logger.info(
+        `[page-health] cached dead URL skipped: ${deal.productName} -> ${healthKey} (${cached.reason || 'unknown'})`
+      );
+      continue;
+    }
+
+    const verdict = await verifyProductPage(deal.productUrl);
+
+    if (verdict.ok) {
+      liveDeals.push(deal);
+      continue;
+    }
+
+    healthEntries.push({
+      canonicalUrl: healthKey,
+      finalUrl: verdict.finalUrl,
+      state: 'dead',
+      reason: verdict.reason,
+      status: verdict.status,
+      checkedAt: verdict.checkedAt
+    });
+
+    logger.info(
+      `[page-health] dropped dead URL: ${deal.productName} -> ${healthKey} (${verdict.reason || 'unknown'})`
+    );
+  }
+
+  await rememberUrlHealth(healthEntries.filter((entry) => entry.canonicalUrl));
+
+  return liveDeals;
+}
+
 export async function findDeals() {
   const fetchers = [
     ['Mercado Livre', fetchMercadoLivreDeals],
@@ -127,10 +185,11 @@ export async function findDeals() {
     .filter(Boolean);
   const unique = dedupeDeals(candidates);
   const compared = annotateBestPriceDeals(unique);
-  const valid = selectFeaturedDeals(
+  const featured = selectFeaturedDeals(
     compared.filter((deal) => evaluateDeal(deal).accepted),
     20
   );
+  const valid = await filterLiveDeals(featured);
 
   await saveSeenDeals(valid);
 
