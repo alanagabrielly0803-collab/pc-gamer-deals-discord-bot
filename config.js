@@ -68,10 +68,10 @@ export const config = {
 
   port: numberValue('PORT', 3000),
   checkIntervalMinutes: Math.max(5, numberValue('CHECK_INTERVAL_MINUTES', 30)),
-  maxPostsPerCheck: Math.max(1, numberValue('MAX_POSTS_PER_CHECK', 20)),
-  maxCandidatesPerCheck: Math.max(20, numberValue('MAX_CANDIDATES_PER_CHECK', 80)),
-  maxPostsPerStore: Math.max(1, numberValue('MAX_POSTS_PER_STORE', 6)),
-  maxPostsPerCategory: Math.max(1, numberValue('MAX_POSTS_PER_CATEGORY', 4)),
+  maxPostsPerCheck: Math.max(1, numberValue('MAX_POSTS_PER_CHECK', 50)),
+  maxCandidatesPerCheck: Math.max(50, numberValue('MAX_CANDIDATES_PER_CHECK', 150)),
+  maxPostsPerStore: Math.max(1, numberValue('MAX_POSTS_PER_STORE', 25)),
+  maxPostsPerCategory: Math.max(1, numberValue('MAX_POSTS_PER_CATEGORY', 12)),
   minDiscountPercent: Math.max(1, numberValue('MIN_DISCOUNT_PERCENT', 1)),
   maxPrice: numberValue('MAX_PRICE', null),
   requireImageForPost: envFlag('REQUIRE_IMAGE_FOR_POST'),
@@ -85,5 +85,5 @@ export const config = {
   monitoredCategories: stringList('MONITORED_CATEGORIES', MONITORED_CATEGORIES),
   monitoredStores: stringList('MONITORED_STORES', ['Kabum', 'Kalunga']),
 
-  version: '1.3.7-test'
+  version: '1.3.8-test'
 };
