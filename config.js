@@ -53,7 +53,8 @@ const sourceFlags = {
   mercadoLivre: envFlagDefault('ENABLE_MERCADO_LIVRE', false),
   kabum: envFlagDefault('ENABLE_KABUM', true),
   kalunga: envFlagDefault('ENABLE_KALUNGA', true),
-  terabyte: envFlagDefault('ENABLE_TERABYTE', false)
+  terabyte: envFlagDefault('ENABLE_TERABYTE', false),
+  shopee: envFlagDefault('ENABLE_SHOPEE', true)
 };
 
 export const config = {
@@ -79,7 +80,7 @@ export const config = {
   includeKeywords: stringList('INCLUDE_KEYWORDS', DISCOVERY_TERMS),
   excludeKeywords: stringList('EXCLUDE_KEYWORDS', EXCLUDE_KEYWORDS),
   monitoredCategories: stringList('MONITORED_CATEGORIES', MONITORED_CATEGORIES),
-  monitoredStores: stringList('MONITORED_STORES', ['Kabum', 'Kalunga']),
+  monitoredStores: stringList('MONITORED_STORES', ['Kabum', 'Kalunga', 'Shopee']),
 
-  version: '1.3.3-test'
+  version: '1.3.4-test'
 };
