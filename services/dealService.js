@@ -3,7 +3,6 @@ import { fetchMercadoLivreDeals } from '../sources/mercadolivre.js';
 import { fetchKabumDeals } from '../sources/kabum.js';
 import { fetchKalungaDeals } from '../sources/kalunga.js';
 import { fetchTerabyteDeals } from '../sources/terabyte.js';
-import { fetchShopeeDeals } from '../sources/shopee.js';
 import { fetchPublicShopeeDeals } from '../sources/publicShopee.js';
 
 import { normalizeDeal } from './normalizeDeal.js';
@@ -27,16 +26,25 @@ async function safeFetch(name, fn) {
   }
 }
 
+function hasPublicShopeeSources() {
+  return (config.publicSourceUrls?.length || 0) > 0 || (config.rssSourceUrls?.length || 0) > 0;
+}
+
 function getEnabledFetchers() {
   const flags = config.sourceFlags || {};
   const fetchers = [
     ['Mercado Livre', fetchMercadoLivreDeals, flags.mercadoLivre === true],
     ['Kabum', fetchKabumDeals, flags.kabum !== false],
     ['Kalunga', fetchKalungaDeals, flags.kalunga !== false],
-    ['Terabyte', fetchTerabyteDeals, flags.terabyte !== false],
-    ['Shopee', fetchShopeeDeals, flags.shopee !== false],
-    ['Public Shopee', fetchPublicShopeeDeals, flags.publicShopee !== false]
+    ['Terabyte', fetchTerabyteDeals, flags.terabyte === true],
+    ['Public Shopee', fetchPublicShopeeDeals, flags.publicShopee === true && hasPublicShopeeSources()]
   ];
+
+  logger.info('Shopee: disabled by config');
+
+  if (flags.publicShopee === true && !hasPublicShopeeSources()) {
+    logger.info('Public Shopee: disabled because PUBLIC_SOURCE_URLS/RSS_SOURCE_URLS are empty');
+  }
 
   for (const [name, _fn, enabled] of fetchers) {
     if (!enabled) logger.info(`${name}: disabled by config`);
