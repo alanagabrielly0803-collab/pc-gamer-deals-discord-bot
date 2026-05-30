@@ -54,8 +54,8 @@ const sourceFlags = {
   kabum: envFlagDefault('ENABLE_KABUM', true),
   kalunga: envFlagDefault('ENABLE_KALUNGA', true),
   terabyte: envFlagDefault('ENABLE_TERABYTE', false),
-  shopee: envFlagDefault('ENABLE_SHOPEE', false),
-  publicShopee: envFlagDefault('ENABLE_PUBLIC_SHOPEE', true)
+  shopee: envFlagDefault('ENABLE_DIRECT_SHOPEE', false),
+  publicShopee: envFlagDefault('ENABLE_PUBLIC_SHOPEE', false)
 };
 
 export const config = {
@@ -83,7 +83,7 @@ export const config = {
   includeKeywords: stringList('INCLUDE_KEYWORDS', DISCOVERY_TERMS),
   excludeKeywords: stringList('EXCLUDE_KEYWORDS', EXCLUDE_KEYWORDS),
   monitoredCategories: stringList('MONITORED_CATEGORIES', MONITORED_CATEGORIES),
-  monitoredStores: stringList('MONITORED_STORES', ['Kabum', 'Kalunga', 'Shopee']),
+  monitoredStores: stringList('MONITORED_STORES', ['Kabum', 'Kalunga']),
 
-  version: '1.3.6-test'
+  version: '1.3.7-test'
 };
