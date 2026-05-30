@@ -12,7 +12,8 @@ export const state = {
 
   discordStatus: 'starting',
   serviceStatus: 'running',
-  experimentalScrapingEnabled: config.enableExperimentalScraping,
+  startupPostMode: config.startupPostMode,
+  requireImageForPost: config.requireImageForPost,
   version: config.version
 };
 
