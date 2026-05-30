@@ -3,6 +3,7 @@ import { fetchMercadoLivreDeals } from '../sources/mercadolivre.js';
 import { fetchKabumDeals } from '../sources/kabum.js';
 import { fetchKalungaDeals } from '../sources/kalunga.js';
 import { fetchTerabyteDeals } from '../sources/terabyte.js';
+import { fetchShopeeDeals } from '../sources/shopee.js';
 
 import { normalizeDeal } from './normalizeDeal.js';
 import { evaluateDeal } from './validateDeal.js';
@@ -31,7 +32,8 @@ function getEnabledFetchers() {
     ['Mercado Livre', fetchMercadoLivreDeals, flags.mercadoLivre === true],
     ['Kabum', fetchKabumDeals, flags.kabum !== false],
     ['Kalunga', fetchKalungaDeals, flags.kalunga !== false],
-    ['Terabyte', fetchTerabyteDeals, flags.terabyte !== false]
+    ['Terabyte', fetchTerabyteDeals, flags.terabyte !== false],
+    ['Shopee', fetchShopeeDeals, flags.shopee !== false]
   ];
 
   for (const [name, _fn, enabled] of fetchers) {
@@ -208,7 +210,7 @@ function summarizeByStore(deals) {
 }
 
 function canContinueWithoutDiscount(deal) {
-  return String(deal?.storeName || '').toLowerCase() === 'mercado livre';
+  return ['mercado livre', 'shopee'].includes(String(deal?.storeName || '').toLowerCase());
 }
 
 function evaluateForFinalSelection(deal) {
@@ -224,7 +226,7 @@ function evaluateForFinalSelection(deal) {
     ? {
         ...relaxed,
         confidence: relaxed.confidence === 'high' ? 'medium' : relaxed.confidence,
-        reason: 'mercado_livre_without_original_price'
+        reason: `${String(deal.storeName || 'store').toLowerCase().replace(/\s+/g, '_')}_without_original_price`
       }
     : normal;
 }
