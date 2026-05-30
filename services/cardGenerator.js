@@ -2,7 +2,9 @@ import axios from 'axios';
 import sharp from 'sharp';
 
 const WIDTH = 1080;
-const HEIGHT = 1440;
+const HEIGHT = 1080;
+const PRODUCT_IMAGE_WIDTH = 520;
+const PRODUCT_IMAGE_HEIGHT = 520;
 
 const storeAccent = {
   Kabum: '#ff6500',
@@ -87,43 +89,43 @@ async function createProductImageLayer(imageUrl) {
 
   if (!image) {
     return Buffer.from(`
-      <svg width="440" height="560" viewBox="0 0 440 560" xmlns="http://www.w3.org/2000/svg">
+      <svg width="${PRODUCT_IMAGE_WIDTH}" height="${PRODUCT_IMAGE_HEIGHT}" viewBox="0 0 ${PRODUCT_IMAGE_WIDTH} ${PRODUCT_IMAGE_HEIGHT}" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
             <stop offset="0" stop-color="#18213f"/>
             <stop offset="1" stop-color="#050713"/>
           </linearGradient>
         </defs>
-        <rect width="440" height="560" rx="34" fill="url(#g)"/>
-        <circle cx="220" cy="230" r="96" fill="#ffffff" opacity="0.06"/>
-        <text x="220" y="255" text-anchor="middle" font-family="Arial" font-size="42" font-weight="900" fill="#ffffff" opacity="0.92">OFERTA</text>
-        <text x="220" y="306" text-anchor="middle" font-family="Arial" font-size="22" fill="#94a3b8">imagem indisponível</text>
+        <rect width="${PRODUCT_IMAGE_WIDTH}" height="${PRODUCT_IMAGE_HEIGHT}" rx="36" fill="url(#g)"/>
+        <circle cx="260" cy="220" r="112" fill="#ffffff" opacity="0.06"/>
+        <text x="260" y="250" text-anchor="middle" font-family="Arial" font-size="48" font-weight="900" fill="#ffffff" opacity="0.92">OFERTA</text>
+        <text x="260" y="306" text-anchor="middle" font-family="Arial" font-size="24" fill="#94a3b8">imagem indisponível</text>
       </svg>
     `);
   }
 
   return sharp(image)
-    .resize(440, 560, { fit: 'contain', background: { r: 7, g: 11, b: 25, alpha: 1 } })
+    .resize(PRODUCT_IMAGE_WIDTH, PRODUCT_IMAGE_HEIGHT, { fit: 'contain', background: { r: 7, g: 11, b: 25, alpha: 1 } })
     .png()
     .toBuffer();
 }
 
-function infoBox(label, value, x, y, width = 430) {
+function miniPill(label, value, x, y, width) {
   if (!value) return '';
 
   return `
     <g>
-      <rect x="${x}" y="${y}" width="${width}" height="112" rx="24" fill="rgba(255,255,255,0.065)" stroke="rgba(255,255,255,0.13)"/>
-      <text x="${x + 28}" y="${y + 40}" font-family="Arial" font-size="20" font-weight="800" fill="#a78bfa" letter-spacing="1.6">${escapeXml(label.toUpperCase())}</text>
-      <text x="${x + 28}" y="${y + 82}" font-family="Arial" font-size="32" font-weight="900" fill="#ffffff">${escapeXml(truncate(value, 24))}</text>
+      <rect x="${x}" y="${y}" width="${width}" height="74" rx="22" fill="rgba(255,255,255,0.07)" stroke="rgba(255,255,255,0.13)"/>
+      <text x="${x + 24}" y="${y + 27}" font-family="Arial" font-size="16" font-weight="900" fill="#a78bfa" letter-spacing="1.2">${escapeXml(label.toUpperCase())}</text>
+      <text x="${x + 24}" y="${y + 56}" font-family="Arial" font-size="25" font-weight="900" fill="#ffffff">${escapeXml(truncate(value, 24))}</text>
     </g>
   `;
 }
 
 function buildSvg(deal) {
   const accent = storeAccent[deal.storeName] || '#8b5cf6';
-  const productName = truncate(deal.productName || 'Oferta de informática', 86);
-  const nameLines = wrapText(productName, 17, 4);
+  const productName = truncate(deal.productName || 'Oferta de informática', 76);
+  const nameLines = wrapText(productName, 18, 4);
   const price = stripPrice(deal.currentPriceText || deal.currentPrice) || 'Preço no site';
   const original = stripPrice(deal.originalPriceText || deal.originalPrice);
   const discount = deal.discountPercent !== null && deal.discountPercent !== undefined ? `${deal.discountPercent}% OFF` : 'OFERTA';
@@ -132,15 +134,15 @@ function buildSvg(deal) {
   const shipping = deal.shippingInfo || deal.paymentDetails || deal.couponCode || 'Confira no site';
 
   const titleText = nameLines
-    .map((line, index) => `<text x="58" y="${310 + index * 62}" font-family="Arial" font-size="54" font-weight="900" fill="#ffffff">${escapeXml(line)}</text>`)
+    .map((line, index) => `<text x="58" y="${270 + index * 54}" font-family="Arial" font-size="47" font-weight="900" fill="#ffffff">${escapeXml(line)}</text>`)
     .join('');
 
   return `
   <svg width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}" xmlns="http://www.w3.org/2000/svg">
     <defs>
       <radialGradient id="bg1" cx="85%" cy="12%" r="85%">
-        <stop offset="0" stop-color="${accent}" stop-opacity="0.48"/>
-        <stop offset="0.42" stop-color="#111a38" stop-opacity="0.92"/>
+        <stop offset="0" stop-color="${accent}" stop-opacity="0.50"/>
+        <stop offset="0.44" stop-color="#111a38" stop-opacity="0.94"/>
         <stop offset="1" stop-color="#050713"/>
       </radialGradient>
       <linearGradient id="cta" x1="0" y1="0" x2="1" y2="0">
@@ -158,37 +160,32 @@ function buildSvg(deal) {
     </defs>
 
     <rect width="${WIDTH}" height="${HEIGHT}" fill="url(#bg1)"/>
-    <circle cx="930" cy="170" r="220" fill="${accent}" opacity="0.16" filter="url(#glow)"/>
-    <circle cx="125" cy="1260" r="260" fill="#8b5cf6" opacity="0.12" filter="url(#glow)"/>
+    <circle cx="930" cy="155" r="220" fill="${accent}" opacity="0.16" filter="url(#glow)"/>
+    <circle cx="115" cy="960" r="260" fill="#8b5cf6" opacity="0.12" filter="url(#glow)"/>
+    <rect x="38" y="38" width="1004" height="1004" rx="44" fill="rgba(255,255,255,0.035)" stroke="rgba(255,255,255,0.12)"/>
 
-    <rect x="42" y="42" width="996" height="1356" rx="44" fill="rgba(255,255,255,0.035)" stroke="rgba(255,255,255,0.12)"/>
+    <text x="58" y="108" font-family="Arial" font-size="25" font-weight="900" fill="${accent}" letter-spacing="4">OFERTA GAMER</text>
+    <rect x="786" y="62" width="206" height="76" rx="23" fill="${accent}" opacity="0.96"/>
+    <text x="889" y="110" text-anchor="middle" font-family="Arial" font-size="25" font-weight="900" fill="#07111f">${escapeXml(discount)}</text>
 
-    <text x="58" y="112" font-family="Arial" font-size="26" font-weight="900" fill="${accent}" letter-spacing="4">OFERTA GAMER</text>
-    <rect x="750" y="62" width="230" height="86" rx="24" fill="${accent}" opacity="0.96"/>
-    <text x="865" y="116" text-anchor="middle" font-family="Arial" font-size="28" font-weight="900" fill="#07111f">${escapeXml(discount)}</text>
-
-    <text x="58" y="205" font-family="Arial" font-size="94" font-weight="900" fill="#ffffff">ACHADO</text>
-    <text x="58" y="276" font-family="Arial" font-size="64" font-weight="900" fill="${accent}" font-style="italic">IMPERDÍVEL</text>
+    <text x="58" y="190" font-family="Arial" font-size="78" font-weight="900" fill="#ffffff">ACHADO</text>
+    <text x="58" y="248" font-family="Arial" font-size="50" font-weight="900" fill="${accent}" font-style="italic">IMPERDÍVEL</text>
 
     ${titleText}
 
-    <g>
-      <rect x="580" y="250" width="440" height="560" rx="34" fill="rgba(5,7,19,0.92)" stroke="rgba(255,255,255,0.12)"/>
-    </g>
+    <rect x="522" y="190" width="520" height="520" rx="38" fill="rgba(5,7,19,0.92)" stroke="rgba(255,255,255,0.12)"/>
 
-    ${infoBox('Loja', store, 58, 610)}
-    ${infoBox('Categoria', category, 58, 744)}
-    ${infoBox('Condição', shipping, 58, 878)}
+    ${miniPill('Loja', store, 58, 532, 220)}
+    ${miniPill('Categoria', category, 298, 532, 210)}
+    ${miniPill('Condição', shipping, 58, 624, 450)}
 
-    <rect x="58" y="1050" width="964" height="148" rx="34" fill="rgba(0,0,0,0.30)" stroke="rgba(255,255,255,0.12)"/>
-    <text x="88" y="1102" font-family="Arial" font-size="24" font-weight="900" fill="#94a3b8">PREÇO ATUAL</text>
-    <text x="88" y="1168" font-family="Arial" font-size="66" font-weight="900" fill="#ffffff">${escapeXml(price)}</text>
-    ${original ? `<text x="620" y="1160" font-family="Arial" font-size="30" fill="#cbd5e1" text-decoration="line-through">De ${escapeXml(original)}</text>` : ''}
+    <rect x="58" y="742" width="964" height="138" rx="34" fill="rgba(0,0,0,0.30)" stroke="rgba(255,255,255,0.12)"/>
+    <text x="88" y="790" font-family="Arial" font-size="23" font-weight="900" fill="#94a3b8">PREÇO ATUAL</text>
+    <text x="88" y="852" font-family="Arial" font-size="64" font-weight="900" fill="#ffffff">${escapeXml(price)}</text>
+    ${original ? `<text x="610" y="844" font-family="Arial" font-size="30" fill="#cbd5e1" text-decoration="line-through">De ${escapeXml(original)}</text>` : ''}
 
-    <rect x="58" y="1230" width="964" height="104" rx="30" fill="url(#cta)" filter="url(#glow)"/>
-    <text x="540" y="1296" text-anchor="middle" font-family="Arial" font-size="42" font-weight="900" fill="#ffffff">VER OFERTA AGORA</text>
-
-    <text x="540" y="1370" text-anchor="middle" font-family="Arial" font-size="22" fill="#cbd5e1">Preço pode mudar a qualquer momento • Confira antes de comprar</text>
+    <rect x="58" y="920" width="964" height="88" rx="28" fill="url(#cta)" filter="url(#glow)"/>
+    <text x="540" y="976" text-anchor="middle" font-family="Arial" font-size="38" font-weight="900" fill="#ffffff">VER OFERTA AGORA</text>
   </svg>`;
 }
 
@@ -200,8 +197,8 @@ export async function generateDealCard(deal) {
     .composite([
       {
         input: productLayer,
-        left: 580,
-        top: 250
+        left: 522,
+        top: 190
       }
     ])
     .png()
