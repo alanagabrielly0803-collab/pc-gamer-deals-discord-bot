@@ -7,6 +7,8 @@ const USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36';
 
 const MAX_LINKS_PER_SOURCE = 120;
+const MAX_CARD_TEXT_LENGTH = 1400;
+
 const PLACEHOLDER_HOSTS = new Set([
   'site-de-ofertas.com',
   'www.site-de-ofertas.com',
@@ -17,6 +19,11 @@ const PLACEHOLDER_HOSTS = new Set([
   'exemplo.com',
   'www.exemplo.com'
 ]);
+
+const HARDWARE_SIGNAL = /\b(ssd|nvme|sata|hd externo|hd interno|mem[oó]ria ram|\bram\b|ddr3|ddr4|ddr5|placa[ -]?m[aã]e|motherboard|processador|\bcpu\b|ryzen|intel core|core i[3579]|placa de v[ií]deo|placa de video|\bgpu\b|geforce|rtx|gtx|radeon|rx [0-9]|fonte\b|80 plus|gabinete|water cooler|cooler|monitor\b|mouse gamer|teclado gamer|mousepad|headset|fone gamer|microfone|webcam|pc gamer|computador gamer|notebook gamer|kit gamer|cadeira gamer)$/i;
+const HIGH_VALUE_HARDWARE = /\b(pc gamer|computador gamer|notebook gamer|monitor\b|placa de v[ií]deo|placa de video|\bgpu\b|geforce|rtx|gtx|radeon|rx [0-9]|processador|ryzen|intel core|core i[3579])\b/i;
+const BLOCKED_SIGNAL = /\b(heineken|cerveja|pilsen|long neck|garrafa|vinho|whisky|vodka|gin\b|refrigerante|energ[eé]tico|supermercado|mercado|alimento|comida|caf[eé]|fralda|shampoo|perfume|maquiagem|brinquedo|boneca|panela|air fryer|geladeira|fog[aã]o|microondas|smartphone|celular|iphone|samsung galaxy|xiaomi|aliexpress|ali express|temu|shein|amazon|mercado livre|magalu)\b/i;
+const GENERIC_BANNER_TITLE = /^(imagem da oferta|mega ofertas|sele[cç][aã]o premium|o melhor do|ofertas? imperd[ií]veis?|promo[cç][aã]o rel[aâ]mpago)\b/i;
 
 function cleanText(value, maxLength = 220) {
   const text = String(value || '')
@@ -30,6 +37,13 @@ function cleanText(value, maxLength = 220) {
 
   if (!text) return null;
   return text.length > maxLength ? `${text.slice(0, maxLength - 1)}…` : text;
+}
+
+function normalizeTitle(value) {
+  return cleanText(value, 180)
+    ?.replace(/^imagem da oferta\s*/i, '')
+    ?.replace(/^oferta\s*[:\-–]\s*/i, '')
+    ?.trim() || null;
 }
 
 function uniqueBy(items, selector) {
@@ -121,7 +135,7 @@ function cleanShopeeUrl(url) {
 function normalizeImageUrl(value, baseUrl) {
   const url = absoluteUrl(baseUrl, value) || String(value || '').replace(/^\/\//, 'https://');
   if (!/^https?:\/\//i.test(url)) return null;
-  if (/logo|banner|placeholder|sprite|icon|avatar/i.test(url)) return null;
+  if (/logo|banner|placeholder|sprite|icon|avatar|ads?|publicidade/i.test(url)) return null;
   return url.replace('http://', 'https://');
 }
 
@@ -130,6 +144,13 @@ function parsePrice(value) {
   const match = text.match(/R\$\s*([\d\.]+(?:,\d{2})?)/i) || text.match(/(?:^|\s)([\d\.]+,\d{2})(?:\s|$)/);
   if (!match) return null;
   return `R$ ${match[1]}`;
+}
+
+function priceToNumber(value) {
+  const match = String(value || '').match(/([\d\.]+(?:,\d{2})?)/);
+  if (!match) return null;
+  const parsed = Number(match[1].replace(/\./g, '').replace(',', '.'));
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 function inferCategory(name, description = '') {
@@ -155,33 +176,48 @@ function inferCategory(name, description = '') {
 }
 
 function getCardForLink($, link) {
-  return link.closest('article, li, tr, div[class*="offer"], div[class*="deal"], div[class*="promo"], div[class*="card"], div[class*="post"], div[class*="thread"], div');
+  const specific = link.closest(
+    'article, li, tr, section[class*="offer"], section[class*="deal"], section[class*="promo"], div[class*="offer"], div[class*="deal"], div[class*="promo"], div[class*="card"], div[class*="post"], div[class*="thread"], div[class*="item"], div[class*="produto"], div[class*="product"]'
+  );
+
+  return specific.length ? specific : link.parent();
 }
 
 function getTitleFromCard(card, link) {
-  return (
-    cleanText(link.attr('title')) ||
-    cleanText(link.attr('aria-label')) ||
-    cleanText(link.find('img[alt]').first().attr('alt')) ||
-    cleanText(card.find('img[alt]').first().attr('alt')) ||
-    cleanText(card.find('h1, h2, h3, h4, [class*="title"], [class*="name"], [class*="produto"], [class*="product"]').first().text()) ||
-    cleanText(link.text())
-  );
+  const candidates = [
+    card.find('h1, h2, h3, h4, [class*="title"], [class*="name"], [class*="produto"], [class*="product"]').first().text(),
+    link.attr('title'),
+    link.attr('aria-label'),
+    link.text(),
+    link.find('img[alt]').first().attr('alt'),
+    card.find('img[alt]').first().attr('alt')
+  ];
+
+  for (const candidate of candidates) {
+    const title = normalizeTitle(candidate);
+    if (title && !GENERIC_BANNER_TITLE.test(title)) return title;
+  }
+
+  return null;
 }
 
 function getImageFromCard(card, baseUrl) {
-  const image = card.find('img').first();
-  const candidates = [
-    image.attr('src'),
-    image.attr('data-src'),
-    image.attr('data-lazy-src'),
-    image.attr('data-original'),
-    String(image.attr('srcset') || '').split(',').map((part) => part.trim().split(/\s+/)[0]).find(Boolean)
-  ].filter(Boolean);
+  const images = card.find('img').toArray();
 
-  for (const candidate of candidates) {
-    const imageUrl = normalizeImageUrl(candidate, baseUrl);
-    if (imageUrl) return imageUrl;
+  for (const imageEl of images) {
+    const image = card.constructor(imageEl);
+    const candidates = [
+      image.attr('src'),
+      image.attr('data-src'),
+      image.attr('data-lazy-src'),
+      image.attr('data-original'),
+      String(image.attr('srcset') || '').split(',').map((part) => part.trim().split(/\s+/)[0]).find(Boolean)
+    ].filter(Boolean);
+
+    for (const candidate of candidates) {
+      const imageUrl = normalizeImageUrl(candidate, baseUrl);
+      if (imageUrl) return imageUrl;
+    }
   }
 
   return null;
@@ -206,22 +242,39 @@ function getPublicOfferUrl(rawHref, sourceUrl) {
   }
 }
 
+function isAcceptableHardwareDeal(productName, context, currentPrice) {
+  const text = `${productName || ''} ${context || ''}`;
+  const price = priceToNumber(currentPrice);
+
+  if (!productName || !currentPrice || price === null) return false;
+  if (BLOCKED_SIGNAL.test(text)) return false;
+  if (!HARDWARE_SIGNAL.test(text)) return false;
+  if (price < 10) return false;
+  if (HIGH_VALUE_HARDWARE.test(productName) && price < 200) return false;
+
+  return true;
+}
+
 function isCandidateShopeeLink($, linkEl, sourceUrl) {
   const link = $(linkEl);
   const href = link.attr('href');
   const directShopeeUrl = findDirectShopeeUrl(href, sourceUrl);
-  if (directShopeeUrl) return true;
-
   const card = getCardForLink($, link);
   const text = `${href || ''} ${link.attr('title') || ''} ${link.attr('aria-label') || ''} ${link.text() || ''} ${card.text() || ''}`;
-  return hasShopeeSignal(text) && Boolean(getPublicOfferUrl(href, sourceUrl));
+
+  if (!hasShopeeSignal(text) && !directShopeeUrl) return false;
+  return Boolean(directShopeeUrl || getPublicOfferUrl(href, sourceUrl));
 }
 
 function mapHtmlDeal({ $, linkEl, sourceUrl, index }) {
   const link = $(linkEl);
   const href = link.attr('href');
   const card = getCardForLink($, link);
-  const cardText = cleanText(card.text(), 2000) || '';
+  const rawCardText = card.text() || '';
+
+  if (rawCardText.length > MAX_CARD_TEXT_LENGTH) return null;
+
+  const cardText = cleanText(rawCardText, MAX_CARD_TEXT_LENGTH) || '';
   const linkText = cleanText(`${link.attr('title') || ''} ${link.attr('aria-label') || ''} ${link.text() || ''}`, 500) || '';
   const publicOfferUrl = getPublicOfferUrl(href, sourceUrl);
   const directShopeeUrl = findDirectShopeeUrl(href, sourceUrl) || findDirectShopeeUrl(cardText, sourceUrl);
@@ -232,7 +285,7 @@ function mapHtmlDeal({ $, linkEl, sourceUrl, index }) {
   const productName = getTitleFromCard(card, link);
   const currentPrice = parsePrice(cardText || linkText);
 
-  if (!productName || !currentPrice) return null;
+  if (!isAcceptableHardwareDeal(productName, `${cardText} ${linkText}`, currentPrice)) return null;
 
   return {
     externalId: `public-shopee-${index}-${productUrl}`,
@@ -291,18 +344,17 @@ async function fetchPublicHtmlSource(sourceUrl) {
 }
 
 function mapRssDeal({ item, feedUrl, index }) {
-  const title = cleanText(item.find('title').first().text());
+  const title = normalizeTitle(item.find('title').first().text());
   const description = item.find('description, content\\:encoded, encoded').first().text();
   const linkText = item.find('link').first().text() || item.find('guid').first().text();
   const combined = `${title || ''} ${description || ''} ${linkText || ''}`;
   const directShopeeUrl = findDirectShopeeUrl(linkText, feedUrl) || findDirectShopeeUrl(combined, feedUrl);
   const publicOfferUrl = getPublicOfferUrl(linkText, feedUrl);
   const productUrl = directShopeeUrl || publicOfferUrl;
+  const currentPrice = parsePrice(combined);
 
   if (!productUrl || !title || !hasShopeeSignal(combined)) return null;
-
-  const currentPrice = parsePrice(combined);
-  if (!currentPrice) return null;
+  if (!isAcceptableHardwareDeal(title, combined, currentPrice)) return null;
 
   return {
     externalId: `rss-shopee-${index}-${productUrl}`,
