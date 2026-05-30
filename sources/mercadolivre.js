@@ -4,7 +4,6 @@ import * as cheerio from 'cheerio';
 import { config } from '../config.js';
 import { discountPercent } from '../utils/price.js';
 
-const API_BASE_URL = 'https://api.mercadolibre.com/sites/MLB/search';
 const USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36';
 
@@ -39,10 +38,8 @@ const BOOST_SEARCH_TERMS = [
   'adaptador usb c'
 ];
 
-const SORTS = ['relevance', 'price_asc'];
-const API_PAGES = [0, 50];
 const HTML_PAGES = [0, 50];
-const MAX_TERMS = 32;
+const MAX_TERMS = 24;
 
 function cleanText(value) {
   return String(value || '').replace(/\s+/g, ' ').trim();
@@ -87,9 +84,7 @@ function uniqueBy(items, selector) {
   const seen = new Set();
   return items.filter((item) => {
     const key = selector(item);
-    if (!key || seen.has(key)) {
-      return false;
-    }
+    if (!key || seen.has(key)) return false;
     seen.add(key);
     return true;
   });
@@ -111,64 +106,21 @@ export async function fetchMercadoLivreDeals() {
   const searchTerms = resolveSearchTerms();
   const allDeals = [];
 
-  for (let index = 0; index < searchTerms.length; index += 1) {
-    const keyword = searchTerms[index];
-    const sort = SORTS[index % SORTS.length];
-    const deals = await fetchMercadoLivreSearchResults(keyword, sort);
+  console.warn('[mercadolivre] Public API disabled in this build because Render is receiving HTTP 403. Using HTML fallback only.');
+
+  for (const keyword of searchTerms) {
+    const deals = await fetchMercadoLivreHtmlDeals(keyword);
     allDeals.push(...deals);
-
-    await new Promise((resolve) => setTimeout(resolve, 250));
+    await new Promise((resolve) => setTimeout(resolve, 350));
   }
 
-  return uniqueBy(allDeals, (deal) => `${deal.productUrl}|${deal.currentPrice}|${deal.productName}`);
-}
+  const unique = uniqueBy(allDeals, (deal) => `${deal.productUrl}|${deal.currentPrice}|${deal.productName}`);
 
-async function fetchMercadoLivreSearchResults(keyword, sort) {
-  const apiDeals = await fetchMercadoLivreApiDeals(keyword, sort);
-  if (apiDeals.length > 0) {
-    return apiDeals;
+  if (unique.length === 0) {
+    console.warn('[mercadolivre] HTML fallback also returned 0 deals. Render IP may be blocked by Mercado Livre HTML pages too.');
   }
 
-  const htmlDeals = await fetchMercadoLivreHtmlDeals(keyword);
-  if (htmlDeals.length > 0) {
-    return htmlDeals;
-  }
-
-  return [];
-}
-
-async function fetchMercadoLivreApiDeals(keyword, sort) {
-  const deals = [];
-
-  for (const offset of API_PAGES) {
-    try {
-      const params = {
-        q: keyword,
-        limit: 50,
-        offset
-      };
-
-      if (sort && sort !== 'relevance') {
-        params.sort = sort;
-      }
-
-      const { data } = await axios.get(API_BASE_URL, {
-        params,
-        timeout: 20000,
-        headers: {
-          'User-Agent': USER_AGENT,
-          Accept: 'application/json,text/plain,*/*'
-        }
-      });
-
-      const results = Array.isArray(data?.results) ? data.results : [];
-      deals.push(...results.map((item) => mapMercadoLivreApiItem(item)).filter(Boolean));
-    } catch (error) {
-      console.warn(`[mercadolivre] API failed for "${keyword}" offset=${offset}: ${error.response?.status || ''} ${error.message}`);
-    }
-  }
-
-  return uniqueBy(deals, (deal) => deal.productUrl || deal.externalId);
+  return unique;
 }
 
 async function fetchMercadoLivreHtmlDeals(keyword) {
@@ -182,51 +134,58 @@ async function fetchMercadoLivreHtmlDeals(keyword) {
         : `https://lista.mercadolivre.com.br/${searchSlug}`;
 
     try {
-      const { data: html } = await axios.get(url, {
-        timeout: 20000,
+      const { data: html, status } = await axios.get(url, {
+        timeout: 15000,
+        validateStatus: () => true,
         headers: {
           'User-Agent': USER_AGENT,
-          Accept: 'text/html,application/xhtml+xml'
+          Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+          Referer: 'https://www.mercadolivre.com.br/'
         }
       });
 
-      const $ = cheerio.load(html);
-      const links = $(
-        'a[href*="/MLB-"], a[href*="/p/MLB"], a[href*="produto.mercadolivre.com.br"], a.ui-search-link'
-      ).toArray();
+      if (status >= 400) {
+        console.warn(`[mercadolivre] HTML failed for "${keyword}" offset=${offset}: HTTP ${status}`);
+        continue;
+      }
+
+      const $ = cheerio.load(String(html || ''));
+      const links = $('a[href]').filter((_index, el) => {
+        const href = String($(el).attr('href') || '');
+        return /\/MLB-|\/p\/MLB|produto\.mercadolivre\.com\.br|click1\.mercadolivre\.com\.br/i.test(href);
+      }).toArray();
+
+      let accepted = 0;
 
       for (const [index, linkEl] of links.entries()) {
-        const linkEl$ = $(linkEl);
-        const productUrl = absoluteUrl('https://www.mercadolivre.com.br', linkEl$.attr('href') || null);
+        const link = $(linkEl);
+        const productUrl = cleanMercadoLivreUrl(absoluteUrl('https://www.mercadolivre.com.br', link.attr('href')));
         if (!productUrl) continue;
 
-        const card = linkEl$.closest('li, article, div.ui-search-result, div.ui-search-layout__item, div[class*="poly-card"], div');
-        const title =
-          cleanText(card.find('h2, .ui-search-item__title, [class*="title"], [class*="poly-component__title"]').first().text()) ||
-          cleanText(linkEl$.attr('title')) ||
-          cleanText(linkEl$.find('img[alt]').first().attr('alt')) ||
-          cleanText(linkEl$.text());
-
+        const card = link.closest('li, article, div.ui-search-result, div.ui-search-layout__item, div[class*="poly-card"], div[class*="andes-card"], div');
+        const title = getTitleFromCard(card, link);
         if (!title || title.length < 5) continue;
 
         const currentPrice = parseHtmlPrice(card);
-        const originalPrice = parseHtmlOriginalPrice(card);
-        const discount = originalPrice ? discountPercent(originalPrice, currentPrice) : null;
-        const imageUrl = getHtmlImageUrl(card);
-
         if (!currentPrice) continue;
 
+        const originalPrice = parseHtmlOriginalPrice(card);
+        const discount = originalPrice ? discountPercent(originalPrice, currentPrice) : null;
+        const text = cleanText(card.text()).toLowerCase();
+
+        accepted += 1;
         deals.push({
           externalId: `mlb-html-${searchSlug}-${offset}-${index}`,
           productName: title,
-          imageUrl,
+          imageUrl: getHtmlImageUrl(card),
           storeName: 'Mercado Livre',
           category: classifyCategory(title),
           currentPrice,
           originalPrice,
           discountPercent: discount,
           couponCode: null,
-          paymentDetails: card.text().toLowerCase().includes('mercado pago') ? 'Mercado Pago' : null,
+          paymentDetails: text.includes('mercado pago') ? 'Mercado Pago' : null,
           installmentPrice: null,
           stockStatus: null,
           productUrl,
@@ -234,7 +193,7 @@ async function fetchMercadoLivreHtmlDeals(keyword) {
           brand: null,
           model: null,
           specs: null,
-          shippingInfo: /frete gr[aá]tis/i.test(card.text()) ? 'Frete grátis' : null,
+          shippingInfo: /frete gr[aá]tis/i.test(text) ? 'Frete grátis' : null,
           rating: null,
           reviewCount: null,
           isFlashSale: Boolean(originalPrice && currentPrice && originalPrice > currentPrice),
@@ -242,45 +201,27 @@ async function fetchMercadoLivreHtmlDeals(keyword) {
           source: 'Mercado Livre HTML search fallback'
         });
       }
+
+      if (accepted === 0) {
+        console.warn(`[mercadolivre] HTML parsed 0 usable deals for "${keyword}" offset=${offset}. candidateLinks=${links.length}`);
+      }
     } catch (error) {
-      console.warn(`[mercadolivre] HTML failed for "${keyword}" offset=${offset}: ${error.response?.status || ''} ${error.message}`);
+      console.warn(`[mercadolivre] HTML request failed for "${keyword}" offset=${offset}: ${error.message}`);
     }
   }
 
   return uniqueBy(deals, (deal) => deal.productUrl || deal.externalId);
 }
 
-function mapMercadoLivreApiItem(item) {
-  if (!item?.id || !item?.title || !item?.price || !item?.permalink) return null;
-
-  const originalPrice = item.original_price || null;
-  const discount = originalPrice ? discountPercent(originalPrice, item.price) : null;
-
-  return {
-    externalId: `mlb-${item.id}`,
-    productName: item.title,
-    imageUrl: item.thumbnail?.replace('http://', 'https://'),
-    storeName: 'Mercado Livre',
-    category: classifyCategory(item.title),
-    currentPrice: item.price,
-    originalPrice,
-    discountPercent: discount,
-    couponCode: null,
-    paymentDetails: item.accepts_mercadopago ? 'Mercado Pago' : null,
-    installmentPrice: item.installments ? `${item.installments.quantity}x de R$ ${item.installments.amount}` : null,
-    stockStatus: item.available_quantity > 0 ? 'Available' : null,
-    productUrl: item.permalink,
-    dealEndsAt: null,
-    brand: item.attributes?.find((attr) => attr.id === 'BRAND')?.value_name || null,
-    model: item.attributes?.find((attr) => attr.id === 'MODEL')?.value_name || null,
-    specs: null,
-    shippingInfo: item.shipping?.free_shipping ? 'Frete grátis' : null,
-    rating: null,
-    reviewCount: null,
-    isFlashSale: Boolean(item.sale_price),
-    description: `${item.title} encontrado no Mercado Livre.`,
-    source: 'Mercado Livre public search API'
-  };
+function getTitleFromCard(card, link) {
+  return (
+    cleanText(card.find('h2, .ui-search-item__title, [class*="title"], [class*="poly-component__title"]').first().text()) ||
+    cleanText(link.attr('title')) ||
+    cleanText(link.attr('aria-label')) ||
+    cleanText(link.find('img[alt]').first().attr('alt')) ||
+    cleanText(card.find('img[alt]').first().attr('alt')) ||
+    cleanText(link.text())
+  );
 }
 
 function absoluteUrl(baseUrl, href) {
@@ -288,7 +229,31 @@ function absoluteUrl(baseUrl, href) {
   try {
     return new URL(href, baseUrl).toString();
   } catch {
-    return href;
+    return null;
+  }
+}
+
+function cleanMercadoLivreUrl(url) {
+  if (!url) return null;
+
+  try {
+    const parsed = new URL(url);
+
+    if (parsed.hostname.includes('click1.mercadolivre.com.br')) {
+      const target = parsed.searchParams.get('url') || parsed.searchParams.get('go') || parsed.searchParams.get('redirect');
+      if (target) return cleanMercadoLivreUrl(target);
+    }
+
+    parsed.hash = '';
+    for (const key of [...parsed.searchParams.keys()]) {
+      if (/utm_|tracking|source|position|type|matt_tool|matt_word/i.test(key)) {
+        parsed.searchParams.delete(key);
+      }
+    }
+
+    return parsed.toString();
+  } catch {
+    return url;
   }
 }
 
@@ -298,6 +263,7 @@ function getHtmlImageUrl(card) {
     image.attr('src'),
     image.attr('data-src'),
     image.attr('data-lazy-src'),
+    image.attr('data-original'),
     String(image.attr('srcset') || '').split(',').map((part) => part.trim().split(/\s+/)[0]).find(Boolean)
   ].filter(Boolean);
 
@@ -306,18 +272,17 @@ function getHtmlImageUrl(card) {
 }
 
 function parseHtmlPrice(card) {
+  const text = cleanText(card.text());
   const candidates = [
     card.find('.andes-money-amount--cents-superscript, .andes-money-amount__fraction').first().text(),
     card.find('.andes-money-amount__fraction').first().text(),
     card.find('[class*="price"] .andes-money-amount__fraction').first().text(),
-    card.text()
+    text
   ];
 
   for (const candidate of candidates) {
     const match = String(candidate).match(/R\$\s*([\d\.]+(?:,\d{2})?)/i);
-    if (match) {
-      return `R$ ${match[1]}`;
-    }
+    if (match) return `R$ ${match[1]}`;
   }
 
   return null;
@@ -334,9 +299,7 @@ function parseHtmlOriginalPrice(card) {
   for (const selector of selectors) {
     const text = cleanText(card.find(selector).first().text());
     const match = text.match(/R\$\s*([\d\.]+(?:,\d{2})?)/i);
-    if (match) {
-      return `R$ ${match[1]}`;
-    }
+    if (match) return `R$ ${match[1]}`;
   }
 
   return null;
