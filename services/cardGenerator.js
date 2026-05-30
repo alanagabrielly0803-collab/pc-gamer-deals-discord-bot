@@ -145,11 +145,6 @@ function buildSvg(deal) {
         <stop offset="0.44" stop-color="#111a38" stop-opacity="0.94"/>
         <stop offset="1" stop-color="#050713"/>
       </radialGradient>
-      <linearGradient id="cta" x1="0" y1="0" x2="1" y2="0">
-        <stop offset="0" stop-color="#6d28d9"/>
-        <stop offset="0.55" stop-color="#8b5cf6"/>
-        <stop offset="1" stop-color="${accent}"/>
-      </linearGradient>
       <filter id="glow">
         <feGaussianBlur stdDeviation="10" result="blur"/>
         <feMerge>
@@ -179,13 +174,10 @@ function buildSvg(deal) {
     ${miniPill('Categoria', category, 298, 532, 210)}
     ${miniPill('Condição', shipping, 58, 624, 450)}
 
-    <rect x="58" y="742" width="964" height="138" rx="34" fill="rgba(0,0,0,0.30)" stroke="rgba(255,255,255,0.12)"/>
-    <text x="88" y="790" font-family="Arial" font-size="23" font-weight="900" fill="#94a3b8">PREÇO ATUAL</text>
-    <text x="88" y="852" font-family="Arial" font-size="64" font-weight="900" fill="#ffffff">${escapeXml(price)}</text>
-    ${original ? `<text x="610" y="844" font-family="Arial" font-size="30" fill="#cbd5e1" text-decoration="line-through">De ${escapeXml(original)}</text>` : ''}
-
-    <rect x="58" y="920" width="964" height="88" rx="28" fill="url(#cta)" filter="url(#glow)"/>
-    <text x="540" y="976" text-anchor="middle" font-family="Arial" font-size="38" font-weight="900" fill="#ffffff">VER OFERTA AGORA</text>
+    <rect x="58" y="742" width="964" height="188" rx="34" fill="rgba(0,0,0,0.30)" stroke="rgba(255,255,255,0.12)"/>
+    <text x="88" y="802" font-family="Arial" font-size="24" font-weight="900" fill="#94a3b8">PREÇO ATUAL</text>
+    <text x="88" y="878" font-family="Arial" font-size="74" font-weight="900" fill="#ffffff">${escapeXml(price)}</text>
+    ${original ? `<text x="620" y="862" font-family="Arial" font-size="32" fill="#cbd5e1" text-decoration="line-through">De ${escapeXml(original)}</text>` : ''}
   </svg>`;
 }
 
