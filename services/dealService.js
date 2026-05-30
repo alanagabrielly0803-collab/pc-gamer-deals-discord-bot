@@ -4,6 +4,7 @@ import { fetchKabumDeals } from '../sources/kabum.js';
 import { fetchKalungaDeals } from '../sources/kalunga.js';
 import { fetchTerabyteDeals } from '../sources/terabyte.js';
 import { fetchShopeeDeals } from '../sources/shopee.js';
+import { fetchPublicShopeeDeals } from '../sources/publicShopee.js';
 
 import { normalizeDeal } from './normalizeDeal.js';
 import { evaluateDeal } from './validateDeal.js';
@@ -33,7 +34,8 @@ function getEnabledFetchers() {
     ['Kabum', fetchKabumDeals, flags.kabum !== false],
     ['Kalunga', fetchKalungaDeals, flags.kalunga !== false],
     ['Terabyte', fetchTerabyteDeals, flags.terabyte !== false],
-    ['Shopee', fetchShopeeDeals, flags.shopee !== false]
+    ['Shopee', fetchShopeeDeals, flags.shopee !== false],
+    ['Public Shopee', fetchPublicShopeeDeals, flags.publicShopee !== false]
   ];
 
   for (const [name, _fn, enabled] of fetchers) {
@@ -160,6 +162,12 @@ async function filterLiveDeals(deals) {
   let withoutImage = 0;
 
   for (const deal of deals) {
+    if (deal.skipPageHealth) {
+      if (!deal.imageUrl) withoutImage += 1;
+      liveDeals.push(deal);
+      continue;
+    }
+
     const healthKey = getUrlHealthKey(deal);
     const cached = healthKey ? cachedHealth[healthKey] : null;
 
