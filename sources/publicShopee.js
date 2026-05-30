@@ -6,7 +6,7 @@ import { config } from '../config.js';
 const USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36';
 
-const MAX_LINKS_PER_SOURCE = 80;
+const MAX_LINKS_PER_SOURCE = 120;
 const PLACEHOLDER_HOSTS = new Set([
   'site-de-ofertas.com',
   'www.site-de-ofertas.com',
@@ -95,6 +95,10 @@ function findDirectShopeeUrl(value, baseUrl) {
   return null;
 }
 
+function hasShopeeSignal(value) {
+  return /\bshopee\b|shope\.com\.br|shopee\.com\.br/i.test(String(value || ''));
+}
+
 function cleanShopeeUrl(url) {
   if (!url) return null;
 
@@ -151,7 +155,7 @@ function inferCategory(name, description = '') {
 }
 
 function getCardForLink($, link) {
-  return link.closest('article, li, div[class*="offer"], div[class*="deal"], div[class*="promo"], div[class*="card"], div[class*="post"], div');
+  return link.closest('article, li, tr, div[class*="offer"], div[class*="deal"], div[class*="promo"], div[class*="card"], div[class*="post"], div[class*="thread"], div');
 }
 
 function getTitleFromCard(card, link) {
@@ -183,20 +187,55 @@ function getImageFromCard(card, baseUrl) {
   return null;
 }
 
-function mapHtmlDeal({ $, linkEl, sourceUrl, index }) {
+function getPublicOfferUrl(rawHref, sourceUrl) {
+  const directShopeeUrl = findDirectShopeeUrl(rawHref, sourceUrl);
+  if (directShopeeUrl) return directShopeeUrl;
+
+  const publicUrl = absoluteUrl(sourceUrl, rawHref);
+  if (!publicUrl) return null;
+
+  try {
+    const sourceHost = new URL(sourceUrl).hostname.replace(/^www\./, '');
+    const linkHost = new URL(publicUrl).hostname.replace(/^www\./, '');
+    const sameSource = linkHost === sourceHost;
+    const knownRedirect = /pelando|promobit|hardmob|gatry|promoby|dpl\.pelando/i.test(linkHost);
+
+    return sameSource || knownRedirect ? publicUrl : null;
+  } catch {
+    return null;
+  }
+}
+
+function isCandidateShopeeLink($, linkEl, sourceUrl) {
   const link = $(linkEl);
-  const shopeeUrl = findDirectShopeeUrl(link.attr('href'), sourceUrl);
-  if (!shopeeUrl) return null;
+  const href = link.attr('href');
+  const directShopeeUrl = findDirectShopeeUrl(href, sourceUrl);
+  if (directShopeeUrl) return true;
 
   const card = getCardForLink($, link);
+  const text = `${href || ''} ${link.attr('title') || ''} ${link.attr('aria-label') || ''} ${link.text() || ''} ${card.text() || ''}`;
+  return hasShopeeSignal(text) && Boolean(getPublicOfferUrl(href, sourceUrl));
+}
+
+function mapHtmlDeal({ $, linkEl, sourceUrl, index }) {
+  const link = $(linkEl);
+  const href = link.attr('href');
+  const card = getCardForLink($, link);
   const cardText = cleanText(card.text(), 2000) || '';
+  const linkText = cleanText(`${link.attr('title') || ''} ${link.attr('aria-label') || ''} ${link.text() || ''}`, 500) || '';
+  const publicOfferUrl = getPublicOfferUrl(href, sourceUrl);
+  const directShopeeUrl = findDirectShopeeUrl(href, sourceUrl) || findDirectShopeeUrl(cardText, sourceUrl);
+  const productUrl = directShopeeUrl || publicOfferUrl;
+
+  if (!productUrl || !hasShopeeSignal(`${href || ''} ${cardText} ${linkText}`)) return null;
+
   const productName = getTitleFromCard(card, link);
-  const currentPrice = parsePrice(cardText);
+  const currentPrice = parsePrice(cardText || linkText);
 
   if (!productName || !currentPrice) return null;
 
   return {
-    externalId: `public-shopee-${index}-${shopeeUrl}`,
+    externalId: `public-shopee-${index}-${productUrl}`,
     productName,
     imageUrl: getImageFromCard(card, sourceUrl),
     storeName: 'Shopee',
@@ -208,7 +247,7 @@ function mapHtmlDeal({ $, linkEl, sourceUrl, index }) {
     paymentDetails: null,
     installmentPrice: null,
     stockStatus: null,
-    productUrl: shopeeUrl,
+    productUrl,
     dealEndsAt: null,
     brand: null,
     model: null,
@@ -241,7 +280,7 @@ async function fetchPublicHtmlSource(sourceUrl) {
   }
 
   const $ = cheerio.load(String(html || ''));
-  const links = $('a[href]').filter((_index, el) => Boolean(findDirectShopeeUrl($(el).attr('href'), sourceUrl))).slice(0, MAX_LINKS_PER_SOURCE).toArray();
+  const links = $('a[href]').filter((_index, el) => isCandidateShopeeLink($, el, sourceUrl)).slice(0, MAX_LINKS_PER_SOURCE).toArray();
   const deals = links.map((linkEl, index) => mapHtmlDeal({ $, linkEl, sourceUrl, index })).filter(Boolean);
 
   if (deals.length === 0) {
@@ -256,15 +295,17 @@ function mapRssDeal({ item, feedUrl, index }) {
   const description = item.find('description, content\\:encoded, encoded').first().text();
   const linkText = item.find('link').first().text() || item.find('guid').first().text();
   const combined = `${title || ''} ${description || ''} ${linkText || ''}`;
-  const shopeeUrl = findDirectShopeeUrl(linkText, feedUrl) || findDirectShopeeUrl(combined, feedUrl);
+  const directShopeeUrl = findDirectShopeeUrl(linkText, feedUrl) || findDirectShopeeUrl(combined, feedUrl);
+  const publicOfferUrl = getPublicOfferUrl(linkText, feedUrl);
+  const productUrl = directShopeeUrl || publicOfferUrl;
 
-  if (!shopeeUrl || !title) return null;
+  if (!productUrl || !title || !hasShopeeSignal(combined)) return null;
 
   const currentPrice = parsePrice(combined);
   if (!currentPrice) return null;
 
   return {
-    externalId: `rss-shopee-${index}-${shopeeUrl}`,
+    externalId: `rss-shopee-${index}-${productUrl}`,
     productName: title,
     imageUrl: null,
     storeName: 'Shopee',
@@ -276,7 +317,7 @@ function mapRssDeal({ item, feedUrl, index }) {
     paymentDetails: null,
     installmentPrice: null,
     stockStatus: null,
-    productUrl: cleanShopeeUrl(shopeeUrl),
+    productUrl: cleanShopeeUrl(productUrl),
     dealEndsAt: null,
     brand: null,
     model: null,
