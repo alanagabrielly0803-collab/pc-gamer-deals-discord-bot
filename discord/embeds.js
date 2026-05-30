@@ -64,69 +64,88 @@ function translateReason(value) {
   return map[String(value || '').toLowerCase()] || String(value || '');
 }
 
-export function buildDealMessage(deal, options = {}) {
-  const fields = [];
-
-  addField(fields, 'Loja', deal.storeName);
-  addField(fields, 'Categoria', deal.category);
-  addField(fields, 'Preço atual', deal.currentPriceText);
-  addField(fields, 'Preço original', deal.originalPriceText);
-  addField(fields, 'Desconto', deal.discountPercent !== null ? `${deal.discountPercent}% OFF` : null);
-  addField(fields, 'Cupom', deal.couponCode);
-  addField(fields, 'Pagamento', deal.paymentDetails);
-  addField(fields, 'Parcelamento', deal.installmentPrice);
-  addField(fields, 'Estoque', deal.stockStatus);
-  addField(fields, 'Frete', deal.shippingInfo);
-  addField(
-    fields,
-    'Avaliação',
-    deal.rating ? `${deal.rating}${deal.reviewCount ? ` (${deal.reviewCount} avaliações)` : ''}` : null
-  );
-  addField(fields, 'Fim da oferta', deal.dealEndsAt ? new Date(deal.dealEndsAt).toUTCString() : null);
-  addField(fields, 'Tempo restante', deal.timeRemaining);
-  addField(
-    fields,
-    'Confiança',
-    deal.validationConfidence
-      ? `${translateConfidence(deal.validationConfidence)} (${translateReason(deal.validationReason || 'não disponível')})`
-      : null
-  );
-  addField(fields, 'Marca / Modelo', [deal.brand, deal.model].filter(Boolean).join(' / '));
-  addField(fields, 'Especificações', deal.specs, false);
-  addField(fields, 'Encontrado em', new Date(deal.foundAt).toLocaleString('pt-BR'), false);
-
-  const title = deal.priceDropText
+function buildTitle(deal) {
+  return deal.priceDropText
     ? `Queda de preço: ${deal.productName}`
     : deal.isBestPriceComparison
       ? `Menor preço encontrado: ${deal.productName}`
       : deal.isFlashSale
         ? `Oferta relâmpago: ${deal.productName}`
         : `Oferta de informática: ${deal.productName}`;
+}
 
-  const descriptionParts = [
-    deal.priceDropText,
-    deal.comparisonText,
-    deal.description,
-    deal.validationConfidence ? `Confiança da validação: ${translateConfidence(deal.validationConfidence)}.` : null,
-    deal.discountPercent !== null ? `Desconto detectado: ${deal.discountPercent}% OFF.` : null
+function buildCompactDescription(deal) {
+  const parts = [
+    deal.currentPriceText ? `💰 ${deal.currentPriceText}` : null,
+    deal.originalPriceText ? `~~${deal.originalPriceText}~~` : null,
+    deal.discountPercent !== null ? `🔥 ${deal.discountPercent}% OFF` : null,
+    deal.storeName ? `🏪 ${deal.storeName}` : null
   ].filter(Boolean);
+
+  return parts.join(' • ') || 'Oferta encontrada.';
+}
+
+export function buildDealMessage(deal, options = {}) {
+  const title = buildTitle(deal);
 
   const embed = new EmbedBuilder()
     .setTitle(truncate(title, 256))
     .setURL(deal.productUrl)
     .setColor(storeColors[deal.storeName] || 0x5865f2)
-    .setDescription(truncate(descriptionParts.join('\n'), 900) || 'Uma oferta de informática foi encontrada.')
     .setFooter({ text: `Fonte: ${deal.source || deal.storeName}` })
     .setTimestamp(new Date());
 
   if (options.cardAttachmentName) {
+    embed.setDescription(buildCompactDescription(deal));
     embed.setImage(`attachment://${options.cardAttachmentName}`);
-  } else if (deal.imageUrl) {
-    embed.setImage(deal.imageUrl);
-  }
+  } else {
+    const fields = [];
 
-  if (fields.length > 0) {
-    embed.addFields(fields.slice(0, 25));
+    addField(fields, 'Loja', deal.storeName);
+    addField(fields, 'Categoria', deal.category);
+    addField(fields, 'Preço atual', deal.currentPriceText);
+    addField(fields, 'Preço original', deal.originalPriceText);
+    addField(fields, 'Desconto', deal.discountPercent !== null ? `${deal.discountPercent}% OFF` : null);
+    addField(fields, 'Cupom', deal.couponCode);
+    addField(fields, 'Pagamento', deal.paymentDetails);
+    addField(fields, 'Parcelamento', deal.installmentPrice);
+    addField(fields, 'Estoque', deal.stockStatus);
+    addField(fields, 'Frete', deal.shippingInfo);
+    addField(
+      fields,
+      'Avaliação',
+      deal.rating ? `${deal.rating}${deal.reviewCount ? ` (${deal.reviewCount} avaliações)` : ''}` : null
+    );
+    addField(fields, 'Fim da oferta', deal.dealEndsAt ? new Date(deal.dealEndsAt).toUTCString() : null);
+    addField(fields, 'Tempo restante', deal.timeRemaining);
+    addField(
+      fields,
+      'Confiança',
+      deal.validationConfidence
+        ? `${translateConfidence(deal.validationConfidence)} (${translateReason(deal.validationReason || 'não disponível')})`
+        : null
+    );
+    addField(fields, 'Marca / Modelo', [deal.brand, deal.model].filter(Boolean).join(' / '));
+    addField(fields, 'Especificações', deal.specs, false);
+    addField(fields, 'Encontrado em', new Date(deal.foundAt).toLocaleString('pt-BR'), false);
+
+    const descriptionParts = [
+      deal.priceDropText,
+      deal.comparisonText,
+      deal.description,
+      deal.validationConfidence ? `Confiança da validação: ${translateConfidence(deal.validationConfidence)}.` : null,
+      deal.discountPercent !== null ? `Desconto detectado: ${deal.discountPercent}% OFF.` : null
+    ].filter(Boolean);
+
+    embed.setDescription(truncate(descriptionParts.join('\n'), 900) || 'Uma oferta de informática foi encontrada.');
+
+    if (deal.imageUrl) {
+      embed.setImage(deal.imageUrl);
+    }
+
+    if (fields.length > 0) {
+      embed.addFields(fields.slice(0, 25));
+    }
   }
 
   const row = new ActionRowBuilder().addComponents(
