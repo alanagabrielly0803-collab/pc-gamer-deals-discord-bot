@@ -1,3 +1,4 @@
+import { config } from '../config.js';
 import { fetchMercadoLivreDeals } from '../sources/mercadolivre.js';
 import { fetchKabumDeals } from '../sources/kabum.js';
 import { fetchKalungaDeals } from '../sources/kalunga.js';
@@ -39,6 +40,10 @@ function getDealPrice(deal) {
 }
 
 function compareFeaturedDeals(a, b) {
+  const imageA = a?.imageUrl ? 1 : 0;
+  const imageB = b?.imageUrl ? 1 : 0;
+  if (imageA !== imageB) return imageB - imageA;
+
   const confidenceOrder = { high: 3, medium: 2, low: 1 };
   const confidenceA = confidenceOrder[a?.validationConfidence] || 0;
   const confidenceB = confidenceOrder[b?.validationConfidence] || 0;
@@ -62,42 +67,38 @@ function compareFeaturedDeals(a, b) {
 }
 
 function selectFeaturedDeals(deals, limit) {
+  const sorted = [...deals].sort(compareFeaturedDeals);
+  const selected = [];
+  const byStore = new Map();
   const byCategory = new Map();
 
-  for (const deal of deals) {
+  for (const deal of sorted) {
+    if (selected.length >= Math.max(1, limit)) break;
+
+    const storeKey = normalizeCategory(deal.storeName || 'unknown');
     const categoryKey = normalizeCategory(deal.category || 'uncategorized');
-    if (!byCategory.has(categoryKey)) {
-      byCategory.set(categoryKey, []);
-    }
-    byCategory.get(categoryKey).push(deal);
+    const storeCount = byStore.get(storeKey) || 0;
+    const categoryCount = byCategory.get(categoryKey) || 0;
+
+    if (storeCount >= config.maxPostsPerStore) continue;
+    if (categoryCount >= config.maxPostsPerCategory) continue;
+    if (config.requireImageForPost && !deal.imageUrl) continue;
+
+    selected.push(deal);
+    byStore.set(storeKey, storeCount + 1);
+    byCategory.set(categoryKey, categoryCount + 1);
   }
 
-  const featured = [];
-
-  for (const group of byCategory.values()) {
-    const discounted = group.filter((deal) => isValidDeal(deal));
-    const comparison = group.filter((deal) => isValidDeal(deal) && deal.isBestPriceComparison);
-
-    let winner = null;
-
-    if (discounted.length > 0) {
-      discounted.sort(compareFeaturedDeals);
-      winner = discounted[0];
-    } else if (comparison.length > 0) {
-      comparison.sort(compareFeaturedDeals);
-      winner = comparison[0];
-    } else {
-      const priced = [...group].sort(compareFeaturedDeals);
-      winner = priced[0] || null;
-    }
-
-    if (winner) {
-      featured.push(winner);
+  if (selected.length < Math.max(1, limit)) {
+    for (const deal of sorted) {
+      if (selected.length >= Math.max(1, limit)) break;
+      if (selected.includes(deal)) continue;
+      if (config.requireImageForPost && !deal.imageUrl) continue;
+      selected.push(deal);
     }
   }
 
-  featured.sort(compareFeaturedDeals);
-  return featured.slice(0, Math.max(1, limit));
+  return selected;
 }
 
 function getUrlHealthKey(deal) {
@@ -113,12 +114,32 @@ function isFreshEntry(entry, maxAgeMs) {
   return Date.now() - checkedAt <= maxAgeMs;
 }
 
+function applyProductPageEnrichment(deal, verdict) {
+  const enriched = { ...deal };
+
+  if (verdict.imageUrl) {
+    enriched.imageUrl = verdict.imageUrl;
+    enriched.imageSource = 'product_page';
+  }
+
+  if (verdict.productTitle) {
+    enriched.pageProductTitle = verdict.productTitle;
+  }
+
+  if (verdict.finalUrl) {
+    enriched.finalUrl = verdict.finalUrl;
+  }
+
+  return enriched;
+}
+
 async function filterLiveDeals(deals) {
   const db = await readDb();
   const cachedHealth = db.urlHealth || {};
   const deadFreshnessMs = 7 * 24 * 60 * 60 * 1000;
   const liveDeals = [];
   const healthEntries = [];
+  let withoutImage = 0;
 
   for (const deal of deals) {
     const healthKey = getUrlHealthKey(deal);
@@ -134,7 +155,9 @@ async function filterLiveDeals(deals) {
     const verdict = await verifyProductPage(deal.productUrl);
 
     if (verdict.ok) {
-      liveDeals.push(deal);
+      const enriched = applyProductPageEnrichment(deal, verdict);
+      if (!enriched.imageUrl) withoutImage += 1;
+      liveDeals.push(enriched);
       continue;
     }
 
@@ -154,7 +177,18 @@ async function filterLiveDeals(deals) {
 
   await rememberUrlHealth(healthEntries.filter((entry) => entry.canonicalUrl));
 
+  logger.info(`[page-health] live=${liveDeals.length}, withoutImage=${withoutImage}, dropped=${healthEntries.length}`);
+
   return liveDeals;
+}
+
+function summarizeByStore(deals) {
+  const counts = new Map();
+  for (const deal of deals) {
+    const key = deal.storeName || 'Unknown';
+    counts.set(key, (counts.get(key) || 0) + 1);
+  }
+  return [...counts.entries()].map(([store, total]) => `${store}=${total}`).join(', ');
 }
 
 export async function findDeals() {
@@ -187,15 +221,20 @@ export async function findDeals() {
     .filter(Boolean);
   const unique = dedupeDeals(candidates);
   const compared = annotateBestPriceDeals(unique);
-  const featured = selectFeaturedDeals(
+  const candidateLimit = Math.max(config.maxCandidatesPerCheck, config.maxPostsPerCheck);
+  const balancedCandidates = selectFeaturedDeals(
     compared.filter((deal) => evaluateDeal(deal).accepted),
-    20
+    candidateLimit
   );
-  const valid = await filterLiveDeals(featured);
+  const valid = await filterLiveDeals(balancedCandidates);
+  const featured = selectFeaturedDeals(valid, config.maxPostsPerCheck);
 
-  await saveSeenDeals(valid);
+  await saveSeenDeals(featured);
 
-  logger.info(`Deals summary: raw=${raw.length}, valid=${valid.length}, unique=${unique.length}`);
+  logger.info(
+    `Deals summary: raw=${raw.length}, candidates=${candidates.length}, unique=${unique.length}, live=${valid.length}, selected=${featured.length}`
+  );
+  logger.info(`Deals by store: raw=[${summarizeByStore(normalized)}], selected=[${summarizeByStore(featured)}]`);
 
-  return valid;
+  return featured;
 }
