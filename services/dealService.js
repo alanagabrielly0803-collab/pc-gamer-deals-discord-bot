@@ -25,6 +25,22 @@ async function safeFetch(name, fn) {
   }
 }
 
+function getEnabledFetchers() {
+  const flags = config.sourceFlags || {};
+  const fetchers = [
+    ['Mercado Livre', fetchMercadoLivreDeals, flags.mercadoLivre === true],
+    ['Kabum', fetchKabumDeals, flags.kabum !== false],
+    ['Kalunga', fetchKalungaDeals, flags.kalunga !== false],
+    ['Terabyte', fetchTerabyteDeals, flags.terabyte !== false]
+  ];
+
+  for (const [name, _fn, enabled] of fetchers) {
+    if (!enabled) logger.info(`${name}: disabled by config`);
+  }
+
+  return fetchers.filter(([, , enabled]) => enabled).map(([name, fn]) => [name, fn]);
+}
+
 function normalizeCategory(value) {
   return String(value || '')
     .toLowerCase()
@@ -214,13 +230,7 @@ function evaluateForFinalSelection(deal) {
 }
 
 export async function findDeals() {
-  const fetchers = [
-    ['Mercado Livre', fetchMercadoLivreDeals],
-    ['Kabum', fetchKabumDeals],
-    ['Kalunga', fetchKalungaDeals],
-    ['Terabyte', fetchTerabyteDeals]
-  ];
-
+  const fetchers = getEnabledFetchers();
   const raw = [];
 
   for (const [name, fn] of fetchers) {
