@@ -5,7 +5,7 @@ import { fetchKalungaDeals } from '../sources/kalunga.js';
 import { fetchTerabyteDeals } from '../sources/terabyte.js';
 
 import { normalizeDeal } from './normalizeDeal.js';
-import { evaluateDeal, isValidDeal } from './validateDeal.js';
+import { evaluateDeal } from './validateDeal.js';
 import { dedupeDeals } from '../utils/dedupe.js';
 import { annotateBestPriceDeals } from '../utils/priceComparison.js';
 import { verifyProductPage } from '../utils/pageHealth.js';
@@ -191,6 +191,28 @@ function summarizeByStore(deals) {
   return [...counts.entries()].map(([store, total]) => `${store}=${total}`).join(', ');
 }
 
+function canContinueWithoutDiscount(deal) {
+  return String(deal?.storeName || '').toLowerCase() === 'mercado livre';
+}
+
+function evaluateForFinalSelection(deal) {
+  const normal = evaluateDeal(deal);
+  if (normal.accepted) return normal;
+
+  if (normal.reason !== 'discount_below_threshold' || !canContinueWithoutDiscount(deal)) {
+    return normal;
+  }
+
+  const relaxed = evaluateDeal(deal, { allowWithoutDiscount: true });
+  return relaxed.accepted
+    ? {
+        ...relaxed,
+        confidence: relaxed.confidence === 'high' ? 'medium' : relaxed.confidence,
+        reason: 'mercado_livre_without_original_price'
+      }
+    : normal;
+}
+
 export async function findDeals() {
   const fetchers = [
     ['Mercado Livre', fetchMercadoLivreDeals],
@@ -221,18 +243,27 @@ export async function findDeals() {
     .filter(Boolean);
   const unique = dedupeDeals(candidates);
   const compared = annotateBestPriceDeals(unique);
+  const finalCandidates = compared
+    .map((deal) => {
+      const assessment = evaluateForFinalSelection(deal);
+      return assessment.accepted
+        ? {
+            ...deal,
+            validationConfidence: assessment.confidence,
+            validationReason: assessment.reason
+          }
+        : null;
+    })
+    .filter(Boolean);
   const candidateLimit = Math.max(config.maxCandidatesPerCheck, config.maxPostsPerCheck);
-  const balancedCandidates = selectFeaturedDeals(
-    compared.filter((deal) => evaluateDeal(deal).accepted),
-    candidateLimit
-  );
+  const balancedCandidates = selectFeaturedDeals(finalCandidates, candidateLimit);
   const valid = await filterLiveDeals(balancedCandidates);
   const featured = selectFeaturedDeals(valid, config.maxPostsPerCheck);
 
   await saveSeenDeals(featured);
 
   logger.info(
-    `Deals summary: raw=${raw.length}, candidates=${candidates.length}, unique=${unique.length}, live=${valid.length}, selected=${featured.length}`
+    `Deals summary: raw=${raw.length}, candidates=${candidates.length}, unique=${unique.length}, finalCandidates=${finalCandidates.length}, live=${valid.length}, selected=${featured.length}`
   );
   logger.info(`Deals by store: raw=[${summarizeByStore(normalized)}], selected=[${summarizeByStore(featured)}]`);
 
