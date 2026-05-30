@@ -38,10 +38,9 @@ function stringList(name, fallback) {
   return raw.split(',').map((v) => v.trim()).filter(Boolean);
 }
 
-function booleanValue(name, fallback = false) {
-  const raw = process.env[name];
-  if (!raw) return fallback;
-  return ['true', '1', 'yes', 'y'].includes(raw.toLowerCase());
+function enumValue(name, allowed, fallback) {
+  const raw = String(process.env[name] || '').trim().toLowerCase();
+  return allowed.includes(raw) ? raw : fallback;
 }
 
 export const config = {
@@ -55,13 +54,18 @@ export const config = {
   port: numberValue('PORT', 3000),
   checkIntervalMinutes: Math.max(5, numberValue('CHECK_INTERVAL_MINUTES', 30)),
   maxPostsPerCheck: Math.max(1, numberValue('MAX_POSTS_PER_CHECK', 20)),
+  maxCandidatesPerCheck: Math.max(20, numberValue('MAX_CANDIDATES_PER_CHECK', 80)),
+  maxPostsPerStore: Math.max(1, numberValue('MAX_POSTS_PER_STORE', 6)),
+  maxPostsPerCategory: Math.max(1, numberValue('MAX_POSTS_PER_CATEGORY', 4)),
   minDiscountPercent: Math.max(1, numberValue('MIN_DISCOUNT_PERCENT', 1)),
   maxPrice: numberValue('MAX_PRICE', null),
+  requireImageForPost: envFlag('REQUIRE_IMAGE_FOR_POST'),
+  startupPostMode: enumValue('STARTUP_POST_MODE', ['off', 'check', 'refresh'], 'refresh'),
 
   includeKeywords: stringList('INCLUDE_KEYWORDS', DISCOVERY_TERMS),
   excludeKeywords: stringList('EXCLUDE_KEYWORDS', EXCLUDE_KEYWORDS),
   monitoredCategories: stringList('MONITORED_CATEGORIES', MONITORED_CATEGORIES),
   monitoredStores: stringList('MONITORED_STORES', ['Mercado Livre', 'Kabum', 'Kalunga', 'Terabyte']),
 
-  version: '1.2.0'
+  version: '1.3.0-test'
 };
