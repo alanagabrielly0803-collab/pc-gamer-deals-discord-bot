@@ -1,7 +1,10 @@
+import { AttachmentBuilder } from 'discord.js';
+
 import { config } from '../config.js';
 import { client } from './client.js';
 import { buildDealMessage } from './embeds.js';
 import { hasPosted, markPosted, resetDb } from '../storage/jsonStore.js';
+import { generateDealCard } from '../services/cardGenerator.js';
 
 export async function getTargetChannel() {
   const channel = await client.channels.fetch(config.channelId);
@@ -13,6 +16,23 @@ export async function getTargetChannel() {
   return channel;
 }
 
+async function buildDiscordPayload(deal) {
+  const cardAttachmentName = 'oferta.png';
+
+  try {
+    const cardBuffer = await generateDealCard(deal);
+    const attachment = new AttachmentBuilder(cardBuffer, { name: cardAttachmentName });
+
+    return {
+      ...buildDealMessage(deal, { cardAttachmentName }),
+      files: [attachment]
+    };
+  } catch (error) {
+    console.warn('[discord] Failed to generate deal card, falling back to regular embed:', error.message);
+    return buildDealMessage(deal);
+  }
+}
+
 export async function postDeal(deal) {
   if (await hasPosted(deal)) {
     return {
@@ -22,7 +42,8 @@ export async function postDeal(deal) {
   }
 
   const channel = await getTargetChannel();
-  const message = await channel.send(buildDealMessage(deal));
+  const payload = await buildDiscordPayload(deal);
+  const message = await channel.send(payload);
 
   await markPosted(deal, message.id);
 
