@@ -7,6 +7,16 @@ const USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36';
 
 const MAX_LINKS_PER_SOURCE = 80;
+const PLACEHOLDER_HOSTS = new Set([
+  'site-de-ofertas.com',
+  'www.site-de-ofertas.com',
+  'outro-site.com',
+  'www.outro-site.com',
+  'example.com',
+  'www.example.com',
+  'exemplo.com',
+  'www.exemplo.com'
+]);
 
 function cleanText(value, maxLength = 220) {
   const text = String(value || '')
@@ -39,6 +49,31 @@ function absoluteUrl(baseUrl, href) {
   } catch {
     return null;
   }
+}
+
+function isValidSourceUrl(value) {
+  try {
+    const parsed = new URL(String(value || '').trim());
+    if (!['http:', 'https:'].includes(parsed.protocol)) return false;
+    if (PLACEHOLDER_HOSTS.has(parsed.hostname.toLowerCase())) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function filterConfiguredUrls(urls, label) {
+  const valid = [];
+
+  for (const url of urls || []) {
+    if (isValidSourceUrl(url)) {
+      valid.push(url);
+    } else if (url) {
+      console.warn(`[public-shopee] Ignoring invalid ${label}: ${url}`);
+    }
+  }
+
+  return uniqueBy(valid, (url) => url);
 }
 
 function isDirectShopeeUrl(url) {
@@ -241,7 +276,7 @@ function mapRssDeal({ item, feedUrl, index }) {
     paymentDetails: null,
     installmentPrice: null,
     stockStatus: null,
-    productUrl: shopeeUrl,
+    productUrl: cleanShopeeUrl(shopeeUrl),
     dealEndsAt: null,
     brand: null,
     model: null,
@@ -284,11 +319,11 @@ async function fetchPublicRssSource(feedUrl) {
 }
 
 export async function fetchPublicShopeeDeals() {
-  const publicUrls = Array.isArray(config.publicSourceUrls) ? config.publicSourceUrls : [];
-  const rssUrls = Array.isArray(config.rssSourceUrls) ? config.rssSourceUrls : [];
+  const publicUrls = filterConfiguredUrls(config.publicSourceUrls || [], 'PUBLIC_SOURCE_URLS');
+  const rssUrls = filterConfiguredUrls(config.rssSourceUrls || [], 'RSS_SOURCE_URLS');
 
   if (publicUrls.length === 0 && rssUrls.length === 0) {
-    console.warn('[public-shopee] No PUBLIC_SOURCE_URLS or RSS_SOURCE_URLS configured.');
+    console.warn('[public-shopee] No valid PUBLIC_SOURCE_URLS or RSS_SOURCE_URLS configured.');
     return [];
   }
 
