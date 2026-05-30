@@ -56,13 +56,15 @@ function translateReason(value) {
     out_of_stock: 'sem estoque',
     matched_strong_category_and_signal: 'categoria forte e sinal relevante',
     matched_contextual_keyword_with_context: 'termo contextual com contexto',
-    matched_category_signal: 'sinal de categoria'
+    matched_category_signal: 'sinal de categoria',
+    shopee_without_original_price: 'Shopee sem preço original',
+    mercado_livre_without_original_price: 'Mercado Livre sem preço original'
   };
 
   return map[String(value || '').toLowerCase()] || String(value || '');
 }
 
-export function buildDealMessage(deal) {
+export function buildDealMessage(deal, options = {}) {
   const fields = [];
 
   addField(fields, 'Loja', deal.storeName);
@@ -117,7 +119,9 @@ export function buildDealMessage(deal) {
     .setFooter({ text: `Fonte: ${deal.source || deal.storeName}` })
     .setTimestamp(new Date());
 
-  if (deal.imageUrl) {
+  if (options.cardAttachmentName) {
+    embed.setImage(`attachment://${options.cardAttachmentName}`);
+  } else if (deal.imageUrl) {
     embed.setImage(deal.imageUrl);
   }
 
