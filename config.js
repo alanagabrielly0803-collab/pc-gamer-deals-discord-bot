@@ -14,6 +14,12 @@ function envFlag(name) {
   return ['true', '1', 'yes', 'y', 'on'].includes(raw.toLowerCase());
 }
 
+function envFlagDefault(name, fallback) {
+  const raw = process.env[name];
+  if (!raw) return fallback;
+  return ['true', '1', 'yes', 'y', 'on'].includes(raw.toLowerCase());
+}
+
 const mode = String(process.env.BOT_MODE || '').trim().toLowerCase() || 'discord';
 const testMode = mode === 'test' || envFlag('DISCORD_DISABLED');
 
@@ -43,6 +49,13 @@ function enumValue(name, allowed, fallback) {
   return allowed.includes(raw) ? raw : fallback;
 }
 
+const sourceFlags = {
+  mercadoLivre: envFlagDefault('ENABLE_MERCADO_LIVRE', false),
+  kabum: envFlagDefault('ENABLE_KABUM', true),
+  kalunga: envFlagDefault('ENABLE_KALUNGA', true),
+  terabyte: envFlagDefault('ENABLE_TERABYTE', true)
+};
+
 export const config = {
   mode,
   discordEnabled: !testMode,
@@ -62,10 +75,11 @@ export const config = {
   requireImageForPost: envFlag('REQUIRE_IMAGE_FOR_POST'),
   startupPostMode: enumValue('STARTUP_POST_MODE', ['off', 'check', 'refresh'], 'refresh'),
 
+  sourceFlags,
   includeKeywords: stringList('INCLUDE_KEYWORDS', DISCOVERY_TERMS),
   excludeKeywords: stringList('EXCLUDE_KEYWORDS', EXCLUDE_KEYWORDS),
   monitoredCategories: stringList('MONITORED_CATEGORIES', MONITORED_CATEGORIES),
-  monitoredStores: stringList('MONITORED_STORES', ['Mercado Livre', 'Kabum', 'Kalunga', 'Terabyte']),
+  monitoredStores: stringList('MONITORED_STORES', ['Kabum', 'Kalunga', 'Terabyte']),
 
-  version: '1.3.0-test'
+  version: '1.3.2-test'
 };
