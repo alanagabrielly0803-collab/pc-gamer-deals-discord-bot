@@ -14,9 +14,7 @@ const SOURCE_PAGES = [
   'https://www.terabyteshop.com.br/ofertas/placa-de-video',
   'https://www.terabyteshop.com.br/ofertas/monitor',
   'https://www.terabyteshop.com.br/ofertas/teclados',
-  'https://www.terabyteshop.com.br/ofertas/mouses',
-  'https://www.terabyteshop.com.br/ofertas/notebooks',
-  'https://www.terabyteshop.com.br/ofertas/rede-e-internet'
+  'https://www.terabyteshop.com.br/ofertas/mouses'
 ];
 
 function cleanText(value) {
@@ -123,36 +121,23 @@ function inferCategory(name, description = '') {
 
   if (value.includes('ssd')) return 'Armazenamento SSD';
   if (value.includes('memoria') || value.includes('ram')) return 'Memória RAM';
-  if (value.includes('placa de video') || value.includes('rtx') || value.includes('radeon')) return 'Placa de vídeo';
+  if (value.includes('placa de video') || value.includes('placa de vídeo') || value.includes('rtx') || value.includes('radeon')) return 'Placa de vídeo';
   if (value.includes('processador') || value.includes('ryzen') || value.includes('intel')) return 'Processador';
   if (value.includes('fonte')) return 'Fonte';
   if (value.includes('gabinete')) return 'Gabinete';
   if (value.includes('cooler') || value.includes('water cooler')) return 'Cooler';
   if (value.includes('monitor')) return 'Monitor';
   if (value.includes('teclado')) return 'Teclado gamer';
+  if (value.includes('mousepad')) return 'Mousepad';
   if (value.includes('mouse')) return 'Mouse gamer';
   if (value.includes('headset') || value.includes('fone')) return 'Headset gamer';
   if (value.includes('microfone')) return 'Microfone';
   if (value.includes('webcam')) return 'Webcam';
   if (value.includes('hub usb') || value.includes('usb hub')) return 'Hub USB';
-  if (value.includes('roteador') || value.includes('switch') || value.includes('wifi')) return 'Rede';
-  if (value.includes('notebook') || value.includes('laptop')) return 'Notebook';
-  if (value.includes('impressora') || value.includes('toner') || value.includes('cartucho')) return 'Impressora';
   if (value.includes('dock')) return 'Dock';
-  if (value.includes('capture')) return 'Placa de captura';
+  if (value.includes('capture') || value.includes('captura')) return 'Placa de captura';
 
   return 'Hardware';
-}
-
-function parseCurrency(value) {
-  if (value === null || value === undefined) return null;
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-
-  const text = String(value);
-  const match = text.match(/R\$\s*([\d\.]+(?:,\d{2})?)/i) || text.match(/([\d\.]+,\d{2})/);
-  if (!match) return null;
-
-  return Number(match[1].replace(/\./g, '').replace(',', '.'));
 }
 
 function parsePercent(value) {
@@ -162,74 +147,102 @@ function parsePercent(value) {
   return Number.isFinite(number) ? number : null;
 }
 
+function extractPriceMatches(text) {
+  return [...String(text || '').matchAll(/R\$\s*([\d\.]+(?:,\d{2})?)/gi)].map((match) => `R$ ${match[1]}`);
+}
+
 function parsePriceBlock(card) {
   const text = cleanText(card.text());
-  const allPrices = [...text.matchAll(/R\$\s*([\d\.]+(?:,\d{2})?)/gi)].map((match) => match[1]);
+  const prices = extractPriceMatches(text);
 
-  if (allPrices.length === 0) return { currentPrice: null, originalPrice: null };
+  if (prices.length === 0) return { currentPrice: null, originalPrice: null };
 
-  const currentPrice = `R$ ${allPrices[allPrices.length - 1]}`;
-  const originalPrice = allPrices.length > 1 ? `R$ ${allPrices[0]}` : null;
+  const pixPrice = text.match(/(?:pix|à vista|a vista)[^R]{0,80}R\$\s*([\d\.]+(?:,\d{2})?)/i);
+  const currentPrice = pixPrice ? `R$ ${pixPrice[1]}` : prices[prices.length - 1];
+  const originalPrice = prices.length > 1 ? prices[0] : null;
 
   return { currentPrice, originalPrice };
 }
 
+function getImageFromCard(card, sourceUrl) {
+  const image = card.find('img').first();
+  const candidates = [
+    image.attr('src'),
+    image.attr('data-src'),
+    image.attr('data-lazy-src'),
+    image.attr('data-original'),
+    String(image.attr('srcset') || '').split(',').map((part) => part.trim().split(/\s+/)[0]).find(Boolean)
+  ].filter(Boolean);
+
+  for (const candidate of candidates) {
+    const url = absoluteUrl(sourceUrl, candidate);
+    if (url) return url;
+  }
+
+  return null;
+}
+
+function getProductName(card, link) {
+  return (
+    cleanText(link.attr('title')) ||
+    cleanText(link.attr('aria-label')) ||
+    cleanText(link.find('img[alt]').first().attr('alt')) ||
+    cleanText(card.find('img[alt]').first().attr('alt')) ||
+    cleanText(card.find('h1, h2, h3, h4, [class*="name"], [class*="title"], [class*="nome"]').first().text()) ||
+    cleanText(link.text())
+  );
+}
+
 function parseFallbackCards($, sourceUrl) {
   const deals = [];
-  const cards = $('article, li, div').filter((_, el) => {
-    const text = cleanText($(el).text());
-    return /R\$\s*[\d\.]+(?:,\d{2})?/i.test(text) && /\/produto\//i.test(text);
-  });
+  const productLinks = $('a[href*="/produto/"]').toArray();
 
-  cards.each((index, el) => {
-    const card = $(el);
-    const link = card.find('a[href*="/produto/"]').first();
-    const productUrl = absoluteUrl(sourceUrl, link.attr('href'));
-    const productName =
-      cleanText(link.attr('title')) ||
-      cleanText(link.text()) ||
-      cleanText(card.find('h1, h2, h3, h4').first().text());
+  for (const [index, linkEl] of productLinks.entries()) {
+    const link = $(linkEl);
+    const href = link.attr('href');
+    const productUrl = absoluteUrl(sourceUrl, href);
 
-    if (!productUrl || !productName) return;
+    if (!productUrl) continue;
+
+    const card = link.closest('article, li, [class*="product"], [class*="Produto"], [class*="item"], [class*="card"], div');
+    const productName = getProductName(card, link);
+
+    if (!productName || productName.length < 5) continue;
 
     const { currentPrice, originalPrice } = parsePriceBlock(card);
-    if (!currentPrice) return;
+    if (!currentPrice) continue;
 
-    const image =
-      absoluteUrl(sourceUrl, card.find('img').first().attr('src')) ||
-      absoluteUrl(sourceUrl, card.find('img').first().attr('data-src')) ||
-      null;
-
-    const discountPercent = parsePercent(card.text().match(/(\d{1,2})%/i)?.[1]);
+    const text = textOf(card);
+    const discountPercent = parsePercent(text.match(/(\d{1,2})\s*%/i)?.[1]);
 
     deals.push({
       externalId: `terabyte-fallback-${index}-${productUrl}`,
       productName,
-      imageUrl: image,
+      imageUrl: getImageFromCard(card, sourceUrl),
       storeName: 'Terabyte',
-      category: inferCategory(productName, card.text()),
+      category: inferCategory(productName, text),
       currentPrice,
       originalPrice,
       discountPercent,
-      couponCode: null,
-      paymentDetails: card.text().includes('pix') ? 'Pix' : null,
-      installmentPrice: null,
-      stockStatus: /frete gratis/i.test(textOf(card)) ? 'Available' : null,
+      couponCode: /cupom/i.test(text) ? 'Cupom' : null,
+      paymentDetails: /pix/i.test(text) ? 'Pix' : null,
+      installmentPrice: text.match(/(?:até|em)\s+\d+x\s+de\s+R\$\s*[\d\.,]+/i)?.[0] || null,
+      stockStatus: /dispon[ií]vel|comprar|em estoque/i.test(text) ? 'Available' : null,
       productUrl,
       dealEndsAt: null,
       brand: null,
       model: null,
       specs: null,
-      shippingInfo: /frete gratis/i.test(textOf(card)) ? 'Frete grátis' : null,
+      shippingInfo: /frete gr[aá]tis/i.test(text) ? 'Frete grátis' : null,
       rating: null,
       reviewCount: null,
-      isFlashSale: /promo|oferta|flash|sale/i.test(card.text()),
+      isFlashSale: /promo|oferta|flash|sale|desconto|cupom/i.test(text),
       description: `${productName} encontrado na Terabyte.`,
-      source: 'Terabyte public promo scrape'
+      source: 'Terabyte public product-link scrape'
     });
-  });
+  }
 
-  return deals;
+  return uniqueBy(deals, (deal) => `${deal.productUrl}|${deal.currentPrice}|${deal.productName}`);
 }
 
 function textOf(card) {
@@ -251,14 +264,11 @@ export async function fetchTerabyteDeals() {
 
       const $ = cheerio.load(html);
       const jsonLdDeals = parseJsonLdProducts($, url);
-      if (jsonLdDeals.length > 0) {
-        deals.push(...jsonLdDeals);
-        continue;
-      }
+      const fallbackDeals = parseFallbackCards($, url);
 
-      deals.push(...parseFallbackCards($, url));
-    } catch {
-      // Ignore page-level failures and keep moving through the catalog.
+      deals.push(...jsonLdDeals, ...fallbackDeals);
+    } catch (error) {
+      console.warn(`[terabyte] Failed to fetch ${url}: ${error.message}`);
     }
   }
 
