@@ -11,56 +11,38 @@ const USER_AGENT =
 const BOOST_SEARCH_TERMS = [
   'ssd nvme',
   'ssd sata',
-  'hd externo',
-  'hd interno',
-  'memoria ram',
-  'ddr4',
-  'ddr5',
-  'placa mae',
-  'processador',
-  'placa de video',
-  'placa video',
-  'monitor',
-  'monitor gamer',
-  'monitor 144hz',
-  'monitor 165hz',
-  'teclado mecanico',
-  'teclado gamer',
-  'mouse sem fio',
+  'memoria ram ddr4',
+  'memoria ram ddr5',
+  'placa mae am4',
+  'placa mae am5',
+  'processador ryzen',
+  'processador intel core',
+  'placa de video rtx',
+  'placa de video radeon',
+  'fonte atx 80 plus',
+  'gabinete gamer',
+  'water cooler',
+  'cooler processador',
+  'monitor gamer 144hz',
+  'monitor gamer 165hz',
+  'teclado mecanico gamer',
   'mouse gamer',
   'mousepad gamer',
-  'mousepad',
   'headset gamer',
   'microfone usb',
   'webcam full hd',
   'hub usb',
   'dock station',
-  'capture card',
   'placa de captura',
-  'roteador',
-  'switch gigabit',
-  'repetidor wifi',
-  'mesh wifi',
-  'nobreak',
-  'filtro de linha',
-  'impressora',
-  'toner',
-  'cartucho',
-  'notebook',
-  'mini pc',
-  'caixa de som pc',
-  'fone usb',
-  'adaptador usb c',
   'cabo hdmi',
   'cabo displayport',
-  'cabo ethernet',
-  'usb c hub'
+  'adaptador usb c'
 ];
 
 const SORTS = ['relevance', 'price_asc'];
 const API_PAGES = [0, 50];
 const HTML_PAGES = [0, 50];
-const MAX_TERMS = 40;
+const MAX_TERMS = 32;
 
 function cleanText(value) {
   return String(value || '').replace(/\s+/g, ' ').trim();
@@ -71,10 +53,10 @@ function classifyCategory(title) {
 
   if (value.includes('ssd')) return 'Armazenamento SSD';
   if (value.includes('hd externo') || value.includes('hd interno')) return 'Armazenamento';
-  if (value.includes('memoria') || value.includes('ram')) return 'Memória RAM';
-  if (value.includes('placa mae') || value.includes('motherboard')) return 'Placa-mãe';
+  if (value.includes('memoria') || value.includes('memória') || value.includes('ram')) return 'Memória RAM';
+  if (value.includes('placa mae') || value.includes('placa mãe') || value.includes('motherboard')) return 'Placa-mãe';
   if (value.includes('processador') || value.includes('ryzen') || value.includes('intel')) return 'Processador';
-  if (value.includes('placa de video') || value.includes('rtx') || value.includes('radeon')) return 'Placa de vídeo';
+  if (value.includes('placa de video') || value.includes('placa de vídeo') || value.includes('gpu') || value.includes('rtx') || value.includes('radeon')) return 'Placa de vídeo';
   if (value.includes('fonte')) return 'Fonte';
   if (value.includes('cooler') || value.includes('water cooler')) return 'Cooler';
   if (value.includes('monitor')) return 'Monitor';
@@ -86,13 +68,7 @@ function classifyCategory(title) {
   if (value.includes('webcam')) return 'Webcam';
   if (value.includes('hub usb') || value.includes('usb hub')) return 'Hub USB';
   if (value.includes('dock')) return 'Dock';
-  if (value.includes('capture')) return 'Placa de captura';
-  if (value.includes('roteador') || value.includes('switch') || value.includes('mesh') || value.includes('wifi')) {
-    return 'Rede';
-  }
-  if (value.includes('impressora') || value.includes('toner') || value.includes('cartucho')) return 'Impressora';
-  if (value.includes('notebook') || value.includes('laptop') || value.includes('mini pc')) return 'Notebook';
-  if (value.includes('caixa de som')) return 'Áudio';
+  if (value.includes('capture') || value.includes('captura')) return 'Placa de captura';
   if (value.includes('gabinete')) return 'Gabinete';
 
   return 'Hardware';
@@ -125,7 +101,8 @@ function resolveSearchTerms() {
     ...BOOST_SEARCH_TERMS
   ]
     .map((term) => String(term).trim().toLowerCase())
-    .filter(Boolean);
+    .filter(Boolean)
+    .filter((term) => !/impressora|toner|cartucho|notebook|roteador|nobreak|filtro de linha|repetidor|mesh|ps5|xbox|nintendo/i.test(term));
 
   return uniqueBy(terms, (term) => term).slice(0, MAX_TERMS);
 }
@@ -140,29 +117,21 @@ export async function fetchMercadoLivreDeals() {
     const deals = await fetchMercadoLivreSearchResults(keyword, sort);
     allDeals.push(...deals);
 
-    await new Promise((resolve) => setTimeout(resolve, 350));
+    await new Promise((resolve) => setTimeout(resolve, 250));
   }
 
   return uniqueBy(allDeals, (deal) => `${deal.productUrl}|${deal.currentPrice}|${deal.productName}`);
 }
 
 async function fetchMercadoLivreSearchResults(keyword, sort) {
-  try {
-    const apiDeals = await fetchMercadoLivreApiDeals(keyword, sort);
-    if (apiDeals.length > 0) {
-      return apiDeals;
-    }
-  } catch {
-    // Fallback below.
+  const apiDeals = await fetchMercadoLivreApiDeals(keyword, sort);
+  if (apiDeals.length > 0) {
+    return apiDeals;
   }
 
-  try {
-    const htmlDeals = await fetchMercadoLivreHtmlDeals(keyword);
-    if (htmlDeals.length > 0) {
-      return htmlDeals;
-    }
-  } catch {
-    // Ignore and return empty.
+  const htmlDeals = await fetchMercadoLivreHtmlDeals(keyword);
+  if (htmlDeals.length > 0) {
+    return htmlDeals;
   }
 
   return [];
@@ -172,22 +141,31 @@ async function fetchMercadoLivreApiDeals(keyword, sort) {
   const deals = [];
 
   for (const offset of API_PAGES) {
-    const { data } = await axios.get(API_BASE_URL, {
-      params: {
+    try {
+      const params = {
         q: keyword,
         limit: 50,
-        offset,
-        sort
-      },
-      timeout: 20000,
-      headers: {
-        'User-Agent': USER_AGENT,
-        Accept: 'application/json,text/plain,*/*'
-      }
-    });
+        offset
+      };
 
-    const results = Array.isArray(data?.results) ? data.results : [];
-    deals.push(...results.map((item) => mapMercadoLivreApiItem(item)));
+      if (sort && sort !== 'relevance') {
+        params.sort = sort;
+      }
+
+      const { data } = await axios.get(API_BASE_URL, {
+        params,
+        timeout: 20000,
+        headers: {
+          'User-Agent': USER_AGENT,
+          Accept: 'application/json,text/plain,*/*'
+        }
+      });
+
+      const results = Array.isArray(data?.results) ? data.results : [];
+      deals.push(...results.map((item) => mapMercadoLivreApiItem(item)).filter(Boolean));
+    } catch (error) {
+      console.warn(`[mercadolivre] API failed for "${keyword}" offset=${offset}: ${error.response?.status || ''} ${error.message}`);
+    }
   }
 
   return uniqueBy(deals, (deal) => deal.productUrl || deal.externalId);
@@ -203,71 +181,78 @@ async function fetchMercadoLivreHtmlDeals(keyword) {
         ? `https://lista.mercadolivre.com.br/${searchSlug}_Desde_${offset}`
         : `https://lista.mercadolivre.com.br/${searchSlug}`;
 
-    const { data: html } = await axios.get(url, {
-      timeout: 20000,
-      headers: {
-        'User-Agent': USER_AGENT,
-        Accept: 'text/html,application/xhtml+xml'
-      }
-    });
-
-    const $ = cheerio.load(html);
-    const cards = $('li.ui-search-layout__item, div.ui-search-layout__item, article.ui-search-layout__item');
-
-    cards.each((_, cardEl) => {
-      const card = $(cardEl);
-      const linkEl = card.find('a.ui-search-item__group__element, a.ui-search-link, a[href*="/MLB-"]').first();
-
-      const productUrl = absoluteUrl('https://www.mercadolivre.com.br', linkEl.attr('href') || null);
-      const title =
-        cleanText(card.find('h2.ui-search-item__title').first().text()) ||
-        cleanText(card.find('.ui-search-item__title').first().text()) ||
-        cleanText(linkEl.text());
-
-      if (!productUrl || !title) {
-        return;
-      }
-
-      const currentPrice = parseHtmlPrice(card);
-      const originalPrice = parseHtmlOriginalPrice(card);
-      const discount = originalPrice ? discountPercent(originalPrice, currentPrice) : null;
-      const imageUrl =
-        card.find('img.ui-search-result-image__element').first().attr('src') ||
-        card.find('img').first().attr('src') ||
-        null;
-
-      deals.push({
-        externalId: `mlb-html-${searchSlug}-${offset}-${deals.length}`,
-        productName: title,
-        imageUrl: imageUrl ? imageUrl.replace('http://', 'https://') : null,
-        storeName: 'Mercado Livre',
-        category: classifyCategory(title),
-        currentPrice,
-        originalPrice,
-        discountPercent: discount,
-        couponCode: null,
-        paymentDetails: card.text().toLowerCase().includes('mercado pago') ? 'Mercado Pago' : null,
-        installmentPrice: null,
-        stockStatus: null,
-        productUrl,
-        dealEndsAt: null,
-        brand: null,
-        model: null,
-        specs: null,
-        shippingInfo: card.text().toLowerCase().includes('frete gratis') ? 'Frete gratis' : null,
-        rating: null,
-        reviewCount: null,
-        isFlashSale: Boolean(originalPrice && currentPrice && originalPrice > currentPrice),
-        description: `${title} encontrado no Mercado Livre.`,
-        source: 'Mercado Livre HTML search fallback'
+    try {
+      const { data: html } = await axios.get(url, {
+        timeout: 20000,
+        headers: {
+          'User-Agent': USER_AGENT,
+          Accept: 'text/html,application/xhtml+xml'
+        }
       });
-    });
+
+      const $ = cheerio.load(html);
+      const links = $(
+        'a[href*="/MLB-"], a[href*="/p/MLB"], a[href*="produto.mercadolivre.com.br"], a.ui-search-link'
+      ).toArray();
+
+      for (const [index, linkEl] of links.entries()) {
+        const linkEl$ = $(linkEl);
+        const productUrl = absoluteUrl('https://www.mercadolivre.com.br', linkEl$.attr('href') || null);
+        if (!productUrl) continue;
+
+        const card = linkEl$.closest('li, article, div.ui-search-result, div.ui-search-layout__item, div[class*="poly-card"], div');
+        const title =
+          cleanText(card.find('h2, .ui-search-item__title, [class*="title"], [class*="poly-component__title"]').first().text()) ||
+          cleanText(linkEl$.attr('title')) ||
+          cleanText(linkEl$.find('img[alt]').first().attr('alt')) ||
+          cleanText(linkEl$.text());
+
+        if (!title || title.length < 5) continue;
+
+        const currentPrice = parseHtmlPrice(card);
+        const originalPrice = parseHtmlOriginalPrice(card);
+        const discount = originalPrice ? discountPercent(originalPrice, currentPrice) : null;
+        const imageUrl = getHtmlImageUrl(card);
+
+        if (!currentPrice) continue;
+
+        deals.push({
+          externalId: `mlb-html-${searchSlug}-${offset}-${index}`,
+          productName: title,
+          imageUrl,
+          storeName: 'Mercado Livre',
+          category: classifyCategory(title),
+          currentPrice,
+          originalPrice,
+          discountPercent: discount,
+          couponCode: null,
+          paymentDetails: card.text().toLowerCase().includes('mercado pago') ? 'Mercado Pago' : null,
+          installmentPrice: null,
+          stockStatus: null,
+          productUrl,
+          dealEndsAt: null,
+          brand: null,
+          model: null,
+          specs: null,
+          shippingInfo: /frete gr[aá]tis/i.test(card.text()) ? 'Frete grátis' : null,
+          rating: null,
+          reviewCount: null,
+          isFlashSale: Boolean(originalPrice && currentPrice && originalPrice > currentPrice),
+          description: `${title} encontrado no Mercado Livre.`,
+          source: 'Mercado Livre HTML search fallback'
+        });
+      }
+    } catch (error) {
+      console.warn(`[mercadolivre] HTML failed for "${keyword}" offset=${offset}: ${error.response?.status || ''} ${error.message}`);
+    }
   }
 
   return uniqueBy(deals, (deal) => deal.productUrl || deal.externalId);
 }
 
 function mapMercadoLivreApiItem(item) {
+  if (!item?.id || !item?.title || !item?.price || !item?.permalink) return null;
+
   const originalPrice = item.original_price || null;
   const discount = originalPrice ? discountPercent(originalPrice, item.price) : null;
 
@@ -289,7 +274,7 @@ function mapMercadoLivreApiItem(item) {
     brand: item.attributes?.find((attr) => attr.id === 'BRAND')?.value_name || null,
     model: item.attributes?.find((attr) => attr.id === 'MODEL')?.value_name || null,
     specs: null,
-    shippingInfo: item.shipping?.free_shipping ? 'Frete gratis' : null,
+    shippingInfo: item.shipping?.free_shipping ? 'Frete grátis' : null,
     rating: null,
     reviewCount: null,
     isFlashSale: Boolean(item.sale_price),
@@ -305,6 +290,19 @@ function absoluteUrl(baseUrl, href) {
   } catch {
     return href;
   }
+}
+
+function getHtmlImageUrl(card) {
+  const image = card.find('img').first();
+  const candidates = [
+    image.attr('src'),
+    image.attr('data-src'),
+    image.attr('data-lazy-src'),
+    String(image.attr('srcset') || '').split(',').map((part) => part.trim().split(/\s+/)[0]).find(Boolean)
+  ].filter(Boolean);
+
+  const value = candidates.find(Boolean);
+  return value ? value.replace('http://', 'https://') : null;
 }
 
 function parseHtmlPrice(card) {
