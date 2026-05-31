@@ -3,12 +3,12 @@ import { REST, Routes, SlashCommandBuilder } from 'discord.js';
 
 dotenv.config();
 
-const token = process.env.DISCORD_TOKEN;
-const clientId = process.env.CLIENT_ID;
-const guildId = process.env.GUILD_ID;
+const token = process.env['DISCORD_TOKEN'];
+const clientId = process.env['CLIENT_ID'];
+const guildId = process.env['GUILD_ID'];
 
 if (!token || !clientId || !guildId) {
-  throw new Error('DISCORD_TOKEN, CLIENT_ID, and GUILD_ID are required.');
+  throw new Error('Discord command registration environment variables are required.');
 }
 
 const commands = [
@@ -26,6 +26,14 @@ const commands = [
   new SlashCommandBuilder()
     .setName('forcecheck')
     .setDescription('Busca manualmente e publica novas ofertas.'),
+
+  new SlashCommandBuilder()
+    .setName('debugdeals')
+    .setDescription('Roda uma busca sem postar e mostra o diagnóstico dos filtros.'),
+
+  new SlashCommandBuilder()
+    .setName('fontes')
+    .setDescription('Mostra quais fontes de ofertas estão ligadas e os limites atuais.'),
 
   new SlashCommandBuilder()
     .setName('refreshdeals')
