@@ -20,10 +20,12 @@ const PLACEHOLDER_HOSTS = new Set([
   'www.exemplo.com'
 ]);
 
-const HARDWARE_SIGNAL = /\b(ssd|nvme|sata|hd externo|hd interno|mem[oó]ria ram|\bram\b|ddr3|ddr4|ddr5|placa[ -]?m[aã]e|motherboard|processador|\bcpu\b|ryzen|intel core|core i[3579]|placa de v[ií]deo|placa de video|\bgpu\b|geforce|rtx|gtx|radeon|rx [0-9]|fonte\b|80 plus|gabinete|water cooler|cooler|monitor\b|mouse gamer|teclado gamer|mousepad|headset|fone gamer|microfone|webcam|pc gamer|computador gamer|notebook gamer|kit gamer|cadeira gamer)$/i;
-const HIGH_VALUE_HARDWARE = /\b(pc gamer|computador gamer|notebook gamer|monitor\b|placa de v[ií]deo|placa de video|\bgpu\b|geforce|rtx|gtx|radeon|rx [0-9]|processador|ryzen|intel core|core i[3579])\b/i;
+const HARDWARE_SIGNAL = /\b(ssd|nvme|sata|hd externo|hd interno|mem[oó]ria ram|ram\b|ddr3|ddr4|ddr5|placa[ -]?m[aã]e|motherboard|processador|cpu\b|ryzen|intel core|core i[3579]|placa de v[ií]deo|placa de video|gpu\b|geforce|rtx|gtx|radeon|rx [0-9]|fonte\b|80 plus|gabinete|water cooler|cooler|monitor\b|mouse gamer|teclado gamer|mousepad|headset|fone gamer|microfone|webcam|pc gamer|computador gamer|notebook gamer|kit gamer|cadeira gamer)\b/i;
+const HIGH_VALUE_HARDWARE = /\b(pc gamer|computador gamer|notebook gamer|monitor\b|placa de v[ií]deo|placa de video|gpu\b|geforce|rtx|gtx|radeon|rx [0-9]|processador|ryzen|intel core|core i[3579])\b/i;
 const BLOCKED_SIGNAL = /\b(heineken|cerveja|pilsen|long neck|garrafa|vinho|whisky|vodka|gin\b|refrigerante|energ[eé]tico|supermercado|mercado|alimento|comida|caf[eé]|fralda|shampoo|perfume|maquiagem|brinquedo|boneca|panela|air fryer|geladeira|fog[aã]o|microondas|smartphone|celular|iphone|samsung galaxy|xiaomi|aliexpress|ali express|temu|shein|amazon|mercado livre|magalu)\b/i;
 const GENERIC_BANNER_TITLE = /^(imagem da oferta|mega ofertas|sele[cç][aã]o premium|o melhor do|ofertas? imperd[ií]veis?|promo[cç][aã]o rel[aâ]mpago)\b/i;
+const BAD_IMAGE_SIGNAL = /logo|banner|placeholder|sprite|icon|avatar|ads?|publicidade|tracking|pixel/i;
+const PRODUCT_IMAGE_SIGNAL = /shopee|cf\.s|down-|produto|product|cdn|image|img|media|upload/i;
 
 function cleanText(value, maxLength = 220) {
   const text = String(value || '')
@@ -135,7 +137,11 @@ function cleanShopeeUrl(url) {
 function normalizeImageUrl(value, baseUrl) {
   const url = absoluteUrl(baseUrl, value) || String(value || '').replace(/^\/\//, 'https://');
   if (!/^https?:\/\//i.test(url)) return null;
-  if (/logo|banner|placeholder|sprite|icon|avatar|ads?|publicidade/i.test(url)) return null;
+
+  const lower = url.toLowerCase();
+  if (BAD_IMAGE_SIGNAL.test(lower)) return null;
+  if (!PRODUCT_IMAGE_SIGNAL.test(lower) && !/\.(png|jpe?g|webp|avif)(\?.*)?$/i.test(lower)) return null;
+
   return url.replace('http://', 'https://');
 }
 
@@ -336,6 +342,8 @@ async function fetchPublicHtmlSource(sourceUrl) {
   const links = $('a[href]').filter((_index, el) => isCandidateShopeeLink($, el, sourceUrl)).slice(0, MAX_LINKS_PER_SOURCE).toArray();
   const deals = links.map((linkEl, index) => mapHtmlDeal({ $, linkEl, sourceUrl, index })).filter(Boolean);
 
+  console.log(`[public-shopee] ${sourceUrl}: candidateLinks=${links.length}, deals=${deals.length}`);
+
   if (deals.length === 0) {
     console.warn(`[public-shopee] Parsed 0 usable Shopee deals from ${sourceUrl}. candidateLinks=${links.length}`);
   }
@@ -403,6 +411,8 @@ async function fetchPublicRssSource(feedUrl) {
 
   const $ = cheerio.load(String(xml || ''), { xmlMode: true });
   const deals = $('item, entry').toArray().map((item, index) => mapRssDeal({ item: $(item), feedUrl, index })).filter(Boolean);
+
+  console.log(`[public-shopee] RSS ${feedUrl}: items=${$('item, entry').length}, deals=${deals.length}`);
 
   if (deals.length === 0) {
     console.warn(`[public-shopee] Parsed 0 usable Shopee deals from RSS ${feedUrl}. items=${$('item, entry').length}`);
