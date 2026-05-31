@@ -40,7 +40,9 @@ function getEnabledFetchers() {
     ['Public Shopee', fetchPublicShopeeDeals, flags.publicShopee === true && hasPublicShopeeSources()]
   ];
 
-  logger.info('Shopee: disabled by config');
+  if (flags.shopee !== true) {
+    logger.info('Direct Shopee: disabled by config');
+  }
 
   if (flags.publicShopee === true && !hasPublicShopeeSources()) {
     logger.info('Public Shopee: disabled because PUBLIC_SOURCE_URLS/RSS_SOURCE_URLS are empty');
@@ -49,6 +51,8 @@ function getEnabledFetchers() {
   for (const [name, _fn, enabled] of fetchers) {
     if (!enabled) logger.info(`${name}: disabled by config`);
   }
+
+  logger.info(`Enabled sources: ${fetchers.filter(([, , enabled]) => enabled).map(([name]) => name).join(', ') || 'none'}`);
 
   return fetchers.filter(([, , enabled]) => enabled).map(([name, fn]) => [name, fn]);
 }
@@ -161,6 +165,12 @@ function applyProductPageEnrichment(deal, verdict) {
   return enriched;
 }
 
+function shouldDropFailedHealthCheck(verdict) {
+  if (!verdict) return false;
+  if ([404, 410, 451].includes(Number(verdict.status))) return true;
+  return ['soft_404', 'dead_title'].includes(verdict.reason);
+}
+
 async function filterLiveDeals(deals) {
   const db = await readDb();
   const cachedHealth = db.urlHealth || {};
@@ -168,6 +178,7 @@ async function filterLiveDeals(deals) {
   const liveDeals = [];
   const healthEntries = [];
   let withoutImage = 0;
+  let transientHealthFailures = 0;
 
   for (const deal of deals) {
     if (deal.skipPageHealth) {
@@ -195,6 +206,19 @@ async function filterLiveDeals(deals) {
       continue;
     }
 
+    if (!shouldDropFailedHealthCheck(verdict)) {
+      transientHealthFailures += 1;
+      if (!deal.imageUrl) withoutImage += 1;
+      liveDeals.push({
+        ...deal,
+        pageHealthWarning: verdict.reason || 'request_failed'
+      });
+      logger.info(
+        `[page-health] kept after transient health failure: ${deal.productName} -> ${healthKey} (${verdict.reason || 'unknown'})`
+      );
+      continue;
+    }
+
     healthEntries.push({
       canonicalUrl: healthKey,
       finalUrl: verdict.finalUrl,
@@ -211,7 +235,9 @@ async function filterLiveDeals(deals) {
 
   await rememberUrlHealth(healthEntries.filter((entry) => entry.canonicalUrl));
 
-  logger.info(`[page-health] live=${liveDeals.length}, withoutImage=${withoutImage}, dropped=${healthEntries.length}`);
+  logger.info(
+    `[page-health] live=${liveDeals.length}, withoutImage=${withoutImage}, dropped=${healthEntries.length}, transientKept=${transientHealthFailures}`
+  );
 
   return liveDeals;
 }
@@ -223,6 +249,13 @@ function summarizeByStore(deals) {
     counts.set(key, (counts.get(key) || 0) + 1);
   }
   return [...counts.entries()].map(([store, total]) => `${store}=${total}`).join(', ');
+}
+
+function summarizeReasons(reasonCounts) {
+  return [...reasonCounts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([reason, total]) => `${reason}=${total}`)
+    .join(', ');
 }
 
 function canContinueWithoutDiscount(deal) {
@@ -247,6 +280,23 @@ function evaluateForFinalSelection(deal) {
     : normal;
 }
 
+function assessDeals(deals, evaluator, decorateAccepted) {
+  const rejectedReasons = new Map();
+  const accepted = [];
+
+  for (const deal of deals) {
+    const assessment = evaluator(deal);
+
+    if (assessment.accepted) {
+      accepted.push(decorateAccepted(deal, assessment));
+    } else {
+      rejectedReasons.set(assessment.reason, (rejectedReasons.get(assessment.reason) || 0) + 1);
+    }
+  }
+
+  return { accepted, rejectedReasons };
+}
+
 export async function findDeals() {
   const fetchers = getEnabledFetchers();
   const raw = [];
@@ -257,32 +307,28 @@ export async function findDeals() {
 
   const normalized = raw.map(normalizeDeal);
   const withTracking = await enrichWithPriceTracking(normalized);
-  const candidates = withTracking
-    .map((deal) => {
-      const assessment = evaluateDeal(deal, { allowWithoutDiscount: true });
-      return assessment.accepted
-        ? {
-            ...deal,
-            validationConfidence: assessment.confidence,
-            validationReason: assessment.reason
-          }
-        : null;
+  const initialAssessment = assessDeals(
+    withTracking,
+    (deal) => evaluateDeal(deal, { allowWithoutDiscount: true }),
+    (deal, assessment) => ({
+      ...deal,
+      validationConfidence: assessment.confidence,
+      validationReason: assessment.reason
     })
-    .filter(Boolean);
+  );
+  const candidates = initialAssessment.accepted;
   const unique = dedupeDeals(candidates);
   const compared = annotateBestPriceDeals(unique);
-  const finalCandidates = compared
-    .map((deal) => {
-      const assessment = evaluateForFinalSelection(deal);
-      return assessment.accepted
-        ? {
-            ...deal,
-            validationConfidence: assessment.confidence,
-            validationReason: assessment.reason
-          }
-        : null;
+  const finalAssessment = assessDeals(
+    compared,
+    evaluateForFinalSelection,
+    (deal, assessment) => ({
+      ...deal,
+      validationConfidence: assessment.confidence,
+      validationReason: assessment.reason
     })
-    .filter(Boolean);
+  );
+  const finalCandidates = finalAssessment.accepted;
   const candidateLimit = Math.max(config.maxCandidatesPerCheck, config.maxPostsPerCheck);
   const balancedCandidates = selectFeaturedDeals(finalCandidates, candidateLimit);
   const valid = await filterLiveDeals(balancedCandidates);
@@ -294,6 +340,8 @@ export async function findDeals() {
     `Deals summary: raw=${raw.length}, candidates=${candidates.length}, unique=${unique.length}, finalCandidates=${finalCandidates.length}, live=${valid.length}, selected=${featured.length}`
   );
   logger.info(`Deals by store: raw=[${summarizeByStore(normalized)}], selected=[${summarizeByStore(featured)}]`);
+  logger.info(`Initial validation rejected: ${summarizeReasons(initialAssessment.rejectedReasons) || 'none'}`);
+  logger.info(`Final validation rejected: ${summarizeReasons(finalAssessment.rejectedReasons) || 'none'}`);
 
   return featured;
 }
