@@ -12,7 +12,7 @@ const SEARCHES = [
   ['memoria-ram-ddr5', 'RAM'],
   ['teclado-gamer', 'Gaming Keyboard'],
   ['mouse-gamer', 'Gaming Mouse'],
-  ['mousepad-gamer', 'Gaming Mouse'],
+  ['mousepad-gamer', 'Mousepad'],
   ['headset-gamer', 'Gaming Headset'],
   ['microfone-gamer', 'Microphone'],
   ['webcam', 'Webcam'],
@@ -21,11 +21,7 @@ const SEARCHES = [
   ['hub-usb', 'USB Hub'],
   ['notebook-gamer', 'Notebook'],
   ['placa-de-video', 'Graphics Card'],
-  ['processador', 'Processor'],
-  ['impressora', 'Printer'],
-  ['nobreak', 'Hardware'],
-  ['filtro-de-linha', 'Hardware'],
-  ['roteador', 'Networking']
+  ['processador', 'Processor']
 ];
 
 function uniqueBy(items, selector) {
@@ -68,7 +64,7 @@ function classifyCategory(title) {
   if (value.includes('processador') || value.includes('ryzen') || value.includes('intel')) return 'Processador';
   if (value.includes('monitor')) return 'Monitor';
   if (value.includes('teclado')) return 'Teclado gamer';
-  if (value.includes('mousepad')) return 'Mouse gamer';
+  if (value.includes('mousepad')) return 'Mousepad';
   if (value.includes('mouse')) return 'Mouse gamer';
   if (value.includes('headset') || value.includes('fone')) return 'Headset gamer';
   if (value.includes('microfone')) return 'Microfone';
@@ -76,8 +72,6 @@ function classifyCategory(title) {
   if (value.includes('water cooler') || value.includes('watercooler') || value.includes('cooler')) return 'Cooler';
   if (value.includes('hub usb') || value.includes('usb hub')) return 'Hub USB';
   if (value.includes('notebook') || value.includes('laptop')) return 'Notebook';
-  if (value.includes('impressora') || value.includes('toner') || value.includes('cartucho')) return 'Impressora';
-  if (value.includes('roteador') || value.includes('switch') || value.includes('wifi')) return 'Rede';
 
   return 'Hardware';
 }
@@ -145,6 +139,7 @@ async function fetchKalungaSearch(term, page) {
     });
   });
 
+  console.log(`[kalunga] ${term} page=${page}: cards=${cards.length}, deals=${deals.length}`);
   return deals;
 }
 
@@ -155,13 +150,13 @@ function textOf(card) {
 export async function fetchKalungaDeals() {
   const deals = [];
 
-  for (const [term, category] of SEARCHES) {
+  for (const [term] of SEARCHES) {
     for (const page of [1, 2]) {
       try {
         const pageDeals = await fetchKalungaSearch(term, page);
         deals.push(...pageDeals);
-      } catch {
-        // Ignore page-level errors and keep collecting from the remaining searches.
+      } catch (error) {
+        console.warn(`[kalunga] Failed to fetch ${term} page=${page}: ${error.message}`);
       }
     }
   }
