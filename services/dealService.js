@@ -15,6 +15,25 @@ import { enrichWithPriceTracking, rememberUrlHealth, saveSeenDeals, readDb } fro
 import { logger } from '../utils/logger.js';
 import { parsePrice } from '../utils/price.js';
 
+let lastDealDiagnostics = {
+  generatedAt: null,
+  raw: 0,
+  candidates: 0,
+  unique: 0,
+  finalCandidates: 0,
+  live: 0,
+  selected: 0,
+  rawByStore: 'none',
+  selectedByStore: 'none',
+  initialRejected: 'none',
+  finalRejected: 'none',
+  pageHealth: null
+};
+
+export function getLastDealDiagnostics() {
+  return lastDealDiagnostics;
+}
+
 async function safeFetch(name, fn) {
   try {
     const results = await fn();
@@ -235,11 +254,18 @@ async function filterLiveDeals(deals) {
 
   await rememberUrlHealth(healthEntries.filter((entry) => entry.canonicalUrl));
 
+  const pageHealth = {
+    live: liveDeals.length,
+    withoutImage,
+    dropped: healthEntries.length,
+    transientKept: transientHealthFailures
+  };
+
   logger.info(
-    `[page-health] live=${liveDeals.length}, withoutImage=${withoutImage}, dropped=${healthEntries.length}, transientKept=${transientHealthFailures}`
+    `[page-health] live=${pageHealth.live}, withoutImage=${pageHealth.withoutImage}, dropped=${pageHealth.dropped}, transientKept=${pageHealth.transientKept}`
   );
 
-  return liveDeals;
+  return { liveDeals, pageHealth };
 }
 
 function summarizeByStore(deals) {
@@ -331,17 +357,32 @@ export async function findDeals() {
   const finalCandidates = finalAssessment.accepted;
   const candidateLimit = Math.max(config.maxCandidatesPerCheck, config.maxPostsPerCheck);
   const balancedCandidates = selectFeaturedDeals(finalCandidates, candidateLimit);
-  const valid = await filterLiveDeals(balancedCandidates);
+  const { liveDeals: valid, pageHealth } = await filterLiveDeals(balancedCandidates);
   const featured = selectFeaturedDeals(valid, config.maxPostsPerCheck);
 
   await saveSeenDeals(featured);
 
+  lastDealDiagnostics = {
+    generatedAt: new Date().toISOString(),
+    raw: raw.length,
+    candidates: candidates.length,
+    unique: unique.length,
+    finalCandidates: finalCandidates.length,
+    live: valid.length,
+    selected: featured.length,
+    rawByStore: summarizeByStore(normalized) || 'none',
+    selectedByStore: summarizeByStore(featured) || 'none',
+    initialRejected: summarizeReasons(initialAssessment.rejectedReasons) || 'none',
+    finalRejected: summarizeReasons(finalAssessment.rejectedReasons) || 'none',
+    pageHealth
+  };
+
   logger.info(
     `Deals summary: raw=${raw.length}, candidates=${candidates.length}, unique=${unique.length}, finalCandidates=${finalCandidates.length}, live=${valid.length}, selected=${featured.length}`
   );
-  logger.info(`Deals by store: raw=[${summarizeByStore(normalized)}], selected=[${summarizeByStore(featured)}]`);
-  logger.info(`Initial validation rejected: ${summarizeReasons(initialAssessment.rejectedReasons) || 'none'}`);
-  logger.info(`Final validation rejected: ${summarizeReasons(finalAssessment.rejectedReasons) || 'none'}`);
+  logger.info(`Deals by store: raw=[${lastDealDiagnostics.rawByStore}], selected=[${lastDealDiagnostics.selectedByStore}]`);
+  logger.info(`Initial validation rejected: ${lastDealDiagnostics.initialRejected}`);
+  logger.info(`Final validation rejected: ${lastDealDiagnostics.finalRejected}`);
 
   return featured;
 }
