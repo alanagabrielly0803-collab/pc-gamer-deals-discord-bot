@@ -53,7 +53,7 @@ const sourceFlags = {
   mercadoLivre: envFlagDefault('ENABLE_MERCADO_LIVRE', false),
   kabum: envFlagDefault('ENABLE_KABUM', true),
   kalunga: envFlagDefault('ENABLE_KALUNGA', true),
-  terabyte: envFlagDefault('ENABLE_TERABYTE', false),
+  terabyte: envFlagDefault('ENABLE_TERABYTE', true),
   shopee: envFlagDefault('ENABLE_DIRECT_SHOPEE', false),
   publicShopee: envFlagDefault('ENABLE_PUBLIC_SHOPEE', false)
 };
@@ -68,10 +68,10 @@ export const config = {
 
   port: numberValue('PORT', 3000),
   checkIntervalMinutes: Math.max(5, numberValue('CHECK_INTERVAL_MINUTES', 30)),
-  maxPostsPerCheck: Math.max(1, numberValue('MAX_POSTS_PER_CHECK', 50)),
+  maxPostsPerCheck: Math.max(1, numberValue('MAX_POSTS_PER_CHECK', 20)),
   maxCandidatesPerCheck: Math.max(50, numberValue('MAX_CANDIDATES_PER_CHECK', 150)),
-  maxPostsPerStore: Math.max(1, numberValue('MAX_POSTS_PER_STORE', 25)),
-  maxPostsPerCategory: Math.max(1, numberValue('MAX_POSTS_PER_CATEGORY', 12)),
+  maxPostsPerStore: Math.max(1, numberValue('MAX_POSTS_PER_STORE', 12)),
+  maxPostsPerCategory: Math.max(1, numberValue('MAX_POSTS_PER_CATEGORY', 8)),
   minDiscountPercent: Math.max(1, numberValue('MIN_DISCOUNT_PERCENT', 1)),
   maxPrice: numberValue('MAX_PRICE', null),
   requireImageForPost: envFlag('REQUIRE_IMAGE_FOR_POST'),
@@ -83,7 +83,7 @@ export const config = {
   includeKeywords: stringList('INCLUDE_KEYWORDS', DISCOVERY_TERMS),
   excludeKeywords: stringList('EXCLUDE_KEYWORDS', EXCLUDE_KEYWORDS),
   monitoredCategories: stringList('MONITORED_CATEGORIES', MONITORED_CATEGORIES),
-  monitoredStores: stringList('MONITORED_STORES', ['Kabum', 'Kalunga']),
+  monitoredStores: stringList('MONITORED_STORES', ['Kabum', 'Kalunga', 'Terabyte']),
 
-  version: '1.3.8-test'
+  version: '1.3.9-quality'
 };
