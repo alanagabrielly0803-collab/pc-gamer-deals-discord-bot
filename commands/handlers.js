@@ -7,6 +7,35 @@ import { getLastDealDiagnostics } from '../services/dealService.js';
 import { MessageFlags, PermissionsBitField } from 'discord.js';
 
 const inFlightInteractions = new Set();
+const SAFE_DISCORD_CONTENT_LENGTH = 1900;
+
+function limitText(value, maxLength = SAFE_DISCORD_CONTENT_LENGTH) {
+  const text = String(value ?? '');
+  if (text.length <= maxLength) return text;
+  return `${text.slice(0, maxLength - 80)}\n\n...resposta cortada para não passar do limite do Discord.`;
+}
+
+function compactList(values, maxItems = 18) {
+  const list = Array.isArray(values) ? values.filter(Boolean) : [];
+  if (!list.length) return 'Nenhum';
+  const visible = list.slice(0, maxItems).join(', ');
+  const hidden = list.length - Math.min(list.length, maxItems);
+  return hidden > 0 ? `${visible} ... (+${hidden} ocultos)` : visible;
+}
+
+async function replySafe(interaction, content, options = {}) {
+  return interaction.reply({
+    ...options,
+    content: limitText(content)
+  });
+}
+
+async function editReplySafe(interaction, content, options = {}) {
+  return interaction.editReply({
+    ...options,
+    content: limitText(content)
+  });
+}
 
 async function withInteractionLock(interaction, handler) {
   if (!interaction?.id) return;
@@ -64,11 +93,11 @@ async function handleDeals(interaction) {
   const deals = await getRecentDeals(Math.min(limit, 10));
 
   if (!deals.length) {
-    await interaction.reply({ content: 'Ainda não há ofertas salvas. Use /forcecheck primeiro.' });
+    await replySafe(interaction, 'Ainda não há ofertas salvas. Use /forcecheck primeiro.');
     return;
   }
 
-  await interaction.reply({ content: `Mostrando ${deals.length} oferta(s) recente(s) de informática:` });
+  await replySafe(interaction, `Mostrando ${deals.length} oferta(s) recente(s) de informática:`);
 
   for (const deal of deals) {
     await interaction.followUp({ ...buildDealMessage(deal) });
@@ -80,7 +109,7 @@ function formatDiagnostics(diagnostics) {
     ? `live=${diagnostics.pageHealth.live}, semImagem=${diagnostics.pageHealth.withoutImage}, derrubadas=${diagnostics.pageHealth.dropped}, falhaTemporariaMantida=${diagnostics.pageHealth.transientKept}`
     : 'Ainda sem dados';
 
-  return [
+  return limitText([
     '**Diagnóstico da busca**',
     `Gerado em: ${diagnostics.generatedAt || 'Ainda não gerado'}`,
     `Brutas: ${diagnostics.raw}`,
@@ -94,22 +123,23 @@ function formatDiagnostics(diagnostics) {
     `Rejeitadas no filtro inicial: ${diagnostics.initialRejected}`,
     `Rejeitadas no filtro final: ${diagnostics.finalRejected}`,
     `Page-health: ${pageHealth}`
-  ].join('\n');
+  ].join('\n'));
 }
 
 async function handleDebugDeals(interaction) {
   await interaction.deferReply();
   const result = await runCheck({ post: false });
   const diagnostics = getLastDealDiagnostics();
-  await interaction.editReply({
-    content: [
+  await editReplySafe(
+    interaction,
+    [
       result.skipped
         ? 'A busca de diagnóstico foi ignorada porque já havia outra execução em andamento.'
         : `Busca de diagnóstico concluída sem postar. Encontradas: ${result.found}.`,
       '',
       formatDiagnostics(diagnostics)
     ].join('\n')
-  });
+  );
 }
 
 async function handleForceCheck(interaction) {
@@ -124,11 +154,12 @@ async function handleForceCheck(interaction) {
 
   const result = await runCheck({ post: true });
   const diagnostics = getLastDealDiagnostics();
-  await interaction.editReply({
-    content: result.skipped
+  await editReplySafe(
+    interaction,
+    result.skipped
       ? 'A verificação manual foi ignorada porque já havia outra execução em andamento.'
       : [`Verificação manual concluída. Encontradas: ${result.found}. Publicadas: ${result.posted}.`, '', formatDiagnostics(diagnostics)].join('\n')
-  });
+  );
 }
 
 async function handleRefreshDeals(interaction) {
@@ -138,8 +169,7 @@ async function handleRefreshDeals(interaction) {
     perms?.has(PermissionsBitField.Flags.Administrator);
 
   if (!canModerate) {
-    await interaction.reply({
-      content: 'Você precisa de permissão de Gerenciar Mensagens ou Administrador para usar este comando.',
+    await replySafe(interaction, 'Você precisa de permissão de Gerenciar Mensagens ou Administrador para usar este comando.', {
       flags: MessageFlags.Ephemeral
     });
     return;
@@ -154,21 +184,23 @@ async function handleRefreshDeals(interaction) {
 
   const result = await refreshDeals();
 
-  await interaction.editReply({
-    content: [
+  await editReplySafe(
+    interaction,
+    [
       `Limpeza concluída. ${result.deleted || 0} mensagem(ns) antiga(s) do bot excluída(s).`,
       result.skipped
         ? 'A republicação foi ignorada porque já havia outra verificação em andamento.'
         : `Republicação concluída. Encontradas: ${result.found}. Publicadas: ${result.posted}.`
     ].join(' ')
-  });
+  );
 }
 
 async function handleStatus(interaction) {
   const stats = await getStats();
 
-  await interaction.reply({
-    content: [
+  await replySafe(
+    interaction,
+    [
       '**Status do Bot de Ofertas de Informática**',
       `Tempo de atividade: ${getUptimeSeconds()} segundos`,
       `Última verificação: ${state.lastCheck || 'Nunca'}`,
@@ -180,19 +212,20 @@ async function handleStatus(interaction) {
       `Ofertas armazenadas: ${stats.storedDeals}`,
       `Ofertas publicadas: ${stats.postedDeals}`,
       `Produtos acompanhados: ${stats.trackedProducts}`,
-      `Lojas monitoradas: ${config.monitoredStores.join(', ')}`,
-      `Categorias monitoradas: ${config.monitoredCategories.join(', ')}`,
+      `Lojas monitoradas: ${compactList(config.monitoredStores, 12)}`,
+      `Categorias monitoradas: ${compactList(config.monitoredCategories, 12)}`,
       `Status do Discord: ${state.discordStatus}`,
       `Servidor de keep-alive: em execução`,
       `Versão: ${state.version}`
     ].join('\n')
-  });
+  );
 }
 
 async function handleSources(interaction) {
   const flags = config.sourceFlags || {};
-  await interaction.reply({
-    content: [
+  await replySafe(
+    interaction,
+    [
       '**Fontes e limites atuais**',
       `${flags.kabum !== false ? 'ON' : 'OFF'} Kabum`,
       `${flags.kalunga !== false ? 'ON' : 'OFF'} Kalunga`,
@@ -206,21 +239,22 @@ async function handleSources(interaction) {
       `Candidatos analisados: ${config.maxCandidatesPerCheck}`,
       `Exigir imagem: ${config.requireImageForPost ? 'sim' : 'não'}`
     ].join('\n')
-  });
+  );
 }
 
 async function handleFilters(interaction) {
-  await interaction.reply({
-    content: [
+  await replySafe(
+    interaction,
+    [
       '**Filtros Atuais**',
       `Intervalo de verificação: ${config.checkIntervalMinutes} minutos`,
       `Máximo de posts por verificação: ${config.maxPostsPerCheck}`,
       `Desconto mínimo: ${config.minDiscountPercent}%`,
       `Preço máximo: ${config.maxPrice === null ? 'Não definido' : `R$ ${config.maxPrice}`}`,
-      `Lojas: ${config.monitoredStores.join(', ')}`,
-      `Categorias: ${config.monitoredCategories.join(', ')}`,
-      `Palavras-chave incluídas: ${config.includeKeywords.join(', ')}`,
-      `Palavras-chave excluídas: ${config.excludeKeywords.join(', ')}`
+      `Lojas: ${compactList(config.monitoredStores, 12)}`,
+      `Categorias: ${compactList(config.monitoredCategories, 12)}`,
+      `Palavras-chave incluídas: ${compactList(config.includeKeywords, 20)}`,
+      `Palavras-chave excluídas: ${compactList(config.excludeKeywords, 20)}`
     ].join('\n')
-  });
+  );
 }
